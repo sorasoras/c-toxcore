@@ -3029,13 +3029,24 @@ static int handle_gc_mod_list(const GC_Session *_Nonnull c, GC_Chat *_Nonnull ch
     uint16_t num_mods;
     net_unpack_u16(data, &num_mods);
 
+    // Compute hash of current moderation list so we can detect if it actually
+    // changed after unpacking. Avoids spurious moderation events when a peer
+    // re-syncs and sends the same mod list we already have.
+    uint8_t old_mod_hash[MOD_MODERATION_HASH_SIZE];
+    mod_list_make_hash(&chat->moderation, old_mod_hash);
+
     const int unpack_ret = validate_unpack_mod_list(chat, data + sizeof(uint16_t), length - sizeof(uint16_t), num_mods);
 
     if (unpack_ret == 0) {
         update_gc_peer_roles(chat);
 
         if (chat->connection_state == CS_CONNECTED && c->moderation != nullptr) {
-            c->moderation(c->messenger, chat->group_number, gc_invalid_peer_id(), gc_invalid_peer_id(), MV_MOD, userdata);
+            uint8_t new_mod_hash[MOD_MODERATION_HASH_SIZE];
+            mod_list_make_hash(&chat->moderation, new_mod_hash);
+
+            if (memcmp(new_mod_hash, old_mod_hash, MOD_MODERATION_HASH_SIZE) != 0) {
+                c->moderation(c->messenger, chat->group_number, gc_invalid_peer_id(), gc_invalid_peer_id(), MV_MOD, userdata);
+            }
         }
 
         return 0;

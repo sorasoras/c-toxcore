@@ -181,7 +181,7 @@ int net_send_packet(const Networking_Core *net, const IP_Port *ip_port, Net_Pack
     }
 
     /* socket TOX_AF_INET, but target IP NOT: can't send */
-    if (!net_socket_family_compatible(net, ip_port, true)) {
+    if (!net_socket_family_compatible(net, ip_port, false)) {
         // TODO(iphydf): Make this an error. Occasionally we try to send to an
         // all-zero ip_port.
         return -1;

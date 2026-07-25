@@ -724,7 +724,7 @@ static int handle_tcp_packet(TCP_Server *_Nonnull tcp_server, uint32_t con_id, c
             LOGGER_TRACE(tcp_server->logger, "handling pong for %u", con_id);
 
             uint64_t ping_id;
-            memcpy(&ping_id, data + 1, sizeof(uint64_t));
+            net_unpack_u64(data + 1, &ping_id);
 
             if (ping_id != 0) {
                 if (ping_id == con->ping_id) {
@@ -1211,7 +1211,7 @@ static void do_tcp_confirmed(TCP_Server *_Nonnull tcp_server, const Mono_Time *_
                 ++ping_id;
             }
 
-            memcpy(ping + 1, &ping_id, sizeof(uint64_t));
+            net_pack_u64(ping + 1, ping_id);
             const int ret = write_packet_tcp_secure_connection(tcp_server->logger, &conn->con, ping, sizeof(ping), true);
 
             if (ret == 1) {
