@@ -1557,6 +1557,30 @@ const char *_Nonnull tox_err_group_kick_peer_to_string(Tox_Err_Group_Kick_Peer v
 
     return "<invalid Tox_Err_Group_Kick_Peer>";
 }
+const char *_Nonnull tox_err_group_peer_add_to_string(Tox_Err_Group_Peer_Add value)
+{
+    switch (value) {
+        case TOX_ERR_GROUP_PEER_ADD_OK:
+            return "TOX_ERR_GROUP_PEER_ADD_OK";
+
+        case TOX_ERR_GROUP_PEER_ADD_GROUP_NOT_FOUND:
+            return "TOX_ERR_GROUP_PEER_ADD_GROUP_NOT_FOUND";
+
+        case TOX_ERR_GROUP_PEER_ADD_DISCONNECTED:
+            return "TOX_ERR_GROUP_PEER_ADD_DISCONNECTED";
+
+        case TOX_ERR_GROUP_PEER_ADD_BAD_HOST:
+            return "TOX_ERR_GROUP_PEER_ADD_BAD_HOST";
+
+        case TOX_ERR_GROUP_PEER_ADD_PEERS_EXIST:
+            return "TOX_ERR_GROUP_PEER_ADD_PEERS_EXIST";
+
+        case TOX_ERR_GROUP_PEER_ADD_INTERNAL_FAILURE:
+            return "TOX_ERR_GROUP_PEER_ADD_INTERNAL_FAILURE";
+    }
+
+    return "<invalid Tox_Err_Group_Peer_Add>";
+}
 const char *_Nonnull tox_group_mod_event_to_string(Tox_Group_Mod_Event value)
 {
     switch (value) {

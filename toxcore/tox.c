@@ -4229,25 +4229,25 @@ bool tox_group_peer_add(
     GC_Chat *chat = gc_get_group(tox->m->group_handler, group_number);
 
     if (chat == nullptr) {
-        //SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_SET_PASSWORD_GROUP_NOT_FOUND);
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_PEER_ADD_GROUP_NOT_FOUND);
         tox_unlock(tox);
         return false;
     }
 
     if (chat->connection_state == CS_DISCONNECTED) {
-        //SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_SET_PASSWORD_DISCONNECTED);
+        SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_PEER_ADD_DISCONNECTED);
         tox_unlock(tox);
         return false;
     }
 
     IP_Port peer_ip_port_store;
-    IP_Port* peer_ip_port;
+    IP_Port *peer_ip_port = nullptr;
     if (peer_key != nullptr) {
         ip_init(&peer_ip_port_store.ip, tox->m->options.ipv6enabled);
         peer_ip_port_store.port = net_htons(port);
 
-        if (!addr_resolve_or_parse_ip(/*chat->net->ns*/ tox->m->ns, chat->mem, host, &peer_ip_port_store.ip, nullptr, tox->m->options.dns_enabled)) {
-            //SET_ERROR_PARAMETER(error, TOX_ERR_NEW_PROXY_BAD_HOST);
+        if (!addr_resolve_or_parse_ip(tox->m->ns, chat->mem, host, &peer_ip_port_store.ip, nullptr, tox->m->options.dns_enabled)) {
+            SET_ERROR_PARAMETER(error, TOX_ERR_GROUP_PEER_ADD_BAD_HOST);
             tox_unlock(tox);
             return false;
         }
@@ -4262,9 +4262,9 @@ bool tox_group_peer_add(
 
         memcpy(resolved_relays[resolved_relays_counter].public_key, relays_key[i], CRYPTO_PUBLIC_KEY_SIZE);
 
-        if (!addr_resolve_or_parse_ip(/*chat->net->ns*/ tox->m->ns, chat->mem, relays_host[i], &resolved_relays[resolved_relays_counter].ip_port.ip, nullptr, tox->m->options.dns_enabled)) {
-            //SET_ERROR_PARAMETER(error, TOX_ERR_NEW_PROXY_BAD_HOST);
-            // set error but dont fail yet, might have gotten A valid tcp relay and/or direct ipport
+        if (!addr_resolve_or_parse_ip(tox->m->ns, chat->mem, relays_host[i], &resolved_relays[resolved_relays_counter].ip_port.ip, nullptr, tox->m->options.dns_enabled)) {
+            // Failed to resolve this relay, but continue - we might have gotten
+            // a valid direct IPPort or other relays. gc_add_peer handles this.
             // gc_add_peer -1 and -4 handles this case
         } else {
             resolved_relays_counter++;
