@@ -246,6 +246,8 @@ typedef struct Friend {
 
     struct Receipts *_Nullable receipts_start;
     struct Receipts *_Nullable receipts_end;
+
+    Multi_Device_List *_Nullable multi_device_list;  /**< Friend's linked devices. */
 } Friend;
 
 struct Messenger {

@@ -4812,6 +4812,40 @@ size_t tox_self_get_device_name(
     return len;
 }
 
+uint8_t tox_friend_get_device_count(
+    const Tox *tox, Tox_Friend_Number friend_number)
+{
+    assert(tox != nullptr);
+    if (friend_number >= tox->m->numfriends) return 0;
+    const Friend *f = &tox->m->friendlist[friend_number];
+    return f->multi_device_list != nullptr ? f->multi_device_list->num_devices : 0;
+}
+
+bool tox_friend_get_device_pubkey(
+    const Tox *tox, Tox_Friend_Number friend_number, uint8_t index,
+    uint8_t device_pubkey[TOX_PUBLIC_KEY_SIZE])
+{
+    assert(tox != nullptr);
+    if (friend_number >= tox->m->numfriends) return false;
+    const Friend *f = &tox->m->friendlist[friend_number];
+    if (f->multi_device_list == nullptr || index >= f->multi_device_list->num_devices) return false;
+    memcpy(device_pubkey, f->multi_device_list->devices[index].device_pubkey, TOX_PUBLIC_KEY_SIZE);
+    return true;
+}
+
+size_t tox_friend_get_device_name(
+    const Tox *tox, Tox_Friend_Number friend_number, uint8_t index,
+    char device_name[TOX_MAX_DEVICE_NAME_LENGTH])
+{
+    assert(tox != nullptr);
+    if (friend_number >= tox->m->numfriends) return 0;
+    const Friend *f = &tox->m->friendlist[friend_number];
+    if (f->multi_device_list == nullptr || index >= f->multi_device_list->num_devices) return 0;
+    const uint16_t len = f->multi_device_list->devices[index].name_length;
+    memcpy(device_name, f->multi_device_list->devices[index].device_name, len);
+    return len;
+}
+
 /* --- Offline Messaging API --- */
 
 bool tox_friend_send_offline_message(

@@ -85,6 +85,7 @@ typedef enum Packet_Id {
     PACKET_ID_STATUSMESSAGE      = 49,
     PACKET_ID_USERSTATUS         = 50,
     PACKET_ID_TYPING             = 51,
+    PACKET_ID_DEVICE_LIST        = 52, // Multi-device announcement
     PACKET_ID_MESSAGE            = 64,
     PACKET_ID_ACTION             = 65, // PACKET_ID_MESSAGE + MESSAGE_ACTION
     PACKET_ID_MSI                = 69, // Used by AV to setup calls and etc

@@ -496,6 +496,7 @@ int m_delfriend(Messenger *m, int32_t friendnumber)
     }
 
     kill_friend_connection(m->fr_c, m->friendlist[friendnumber].friendcon_id);
+    multi_device_list_free(m->friendlist[friendnumber].multi_device_list);
     m->friendlist[friendnumber] = empty_friend;
 
     uint32_t i;
@@ -1066,6 +1067,7 @@ static void check_friend_connectionstatus(Messenger *_Nonnull m, int32_t friendn
             m->friendlist[friendnumber].userstatus_sent = false;
             m->friendlist[friendnumber].statusmessage_sent = false;
             m->friendlist[friendnumber].user_istyping_sent = false;
+            m_send_device_list_to_friend(m, friendnumber);
         }
 
         m->friendlist[friendnumber].status = status;
@@ -2085,6 +2087,71 @@ static int m_handle_packet_typing(Messenger *_Nonnull m, const int friendcon_id,
     return 0;
 }
 
+/** @brief Handle incoming device list from a friend. */
+static int m_handle_packet_device_list(Messenger *_Nonnull m, const int friendcon_id,
+        const uint8_t *_Nonnull data, const uint16_t data_length, void *_Nullable userdata)
+{
+    // Find the friend by friendcon_id
+    uint32_t friend_number = UINT32_MAX;
+    for (uint32_t i = 0; i < m->numfriends; ++i) {
+        if (m->friendlist[i].friendcon_id == friendcon_id) {
+            friend_number = i;
+            break;
+        }
+    }
+    if (friend_number == UINT32_MAX) {
+        return 0;
+    }
+
+    Friend *const friend_obj = &m->friendlist[friend_number];
+
+    // Free old device list if any
+    multi_device_list_free(friend_obj->multi_device_list);
+    friend_obj->multi_device_list = multi_device_list_new(m->mem, friend_obj->real_pk);
+
+    Bin_Unpack *bu = bin_unpack_new(m->mem, data, data_length, nullptr);
+    if (bu == nullptr) {
+        return -1;
+    }
+
+    if (!multi_device_list_unpack(friend_obj->multi_device_list, bu)) {
+        bin_unpack_free(bu);
+        return -1;
+    }
+
+    bin_unpack_free(bu);
+    return 0;
+}
+
+/** @brief Send our device list to a friend. Called when they come online. */
+static void m_send_device_list_to_friend(const Messenger *_Nonnull m, uint32_t friend_number)
+{
+    if (m->multi_device_list == nullptr) {
+        return;
+    }
+
+    Bin_Pack *bp = bin_pack_new(m->mem);
+    if (bp == nullptr) {
+        return;
+    }
+
+    if (!multi_device_list_pack(m->multi_device_list, bp)) {
+        bin_pack_free(bp);
+        return;
+    }
+
+    uint32_t packed_size;
+    uint8_t *packed_data = bin_pack_data(bp, &packed_size);
+    if (packed_data == nullptr) {
+        bin_pack_free(bp);
+        return;
+    }
+
+    write_cryptpacket_id(m, (int32_t)friend_number, PACKET_ID_DEVICE_LIST,
+        packed_data, (uint16_t)packed_size, false);
+    bin_pack_free(bp);
+}
+
 static int m_handle_packet_message(Messenger *_Nonnull m, const int friendcon_id, const uint8_t *_Nonnull data, const uint16_t data_length, const Message_Type message_type,
                                    void *_Nullable userdata)
 {
@@ -2352,6 +2419,8 @@ static int m_handle_packet(void *object, int friendcon_id, const uint8_t *data, 
             return m_handle_packet_userstatus(m, friendcon_id, payload, payload_length, userdata);
         case PACKET_ID_TYPING:
             return m_handle_packet_typing(m, friendcon_id, payload, payload_length, userdata);
+        case PACKET_ID_DEVICE_LIST:
+            return m_handle_packet_device_list(m, friendcon_id, payload, payload_length, userdata);
         case PACKET_ID_MESSAGE:
             return m_handle_packet_message(m, friendcon_id, payload, payload_length, MESSAGE_NORMAL, userdata);
         case PACKET_ID_ACTION:

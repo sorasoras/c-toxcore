@@ -881,6 +881,28 @@ size_t tox_self_get_device_name(
     char device_name[TOX_MAX_DEVICE_NAME_LENGTH]);
 
 /**
+ * @brief Get the number of devices a friend has linked to their Tox ID.
+ */
+uint8_t tox_friend_get_device_count(
+    const Tox *tox, Tox_Friend_Number friend_number);
+
+/**
+ * @brief Get the public key of the Nth device linked to a friend's Tox ID.
+ * @return true on success.
+ */
+bool tox_friend_get_device_pubkey(
+    const Tox *tox, Tox_Friend_Number friend_number, uint8_t index,
+    uint8_t device_pubkey[TOX_PUBLIC_KEY_SIZE]);
+
+/**
+ * @brief Get the name of the Nth device linked to a friend's Tox ID.
+ * @return Length of the device name, or 0 on error.
+ */
+size_t tox_friend_get_device_name(
+    const Tox *tox, Tox_Friend_Number friend_number, uint8_t index,
+    char device_name[TOX_MAX_DEVICE_NAME_LENGTH]);
+
+/**
  * @brief Set the client's status message.
  *
  * Status message length cannot exceed TOX_MAX_STATUS_MESSAGE_LENGTH. If
