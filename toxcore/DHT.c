@@ -8,9 +8,11 @@
  */
 #include "DHT.h"
 
-#include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 
+#include "DHT_store.h"
+#include "DHT_store_packets.h"
 #include "LAN_discovery.h"
 #include "attributes.h"
 #include "bin_pack.h"
@@ -143,6 +145,8 @@ struct DHT {
     unsigned int num_to_bootstrap;
 
     dht_nodes_response_cb *_Nullable nodes_response_callback;
+
+    DHT_Store *_Nullable offline_store;  /**< Storage for offline message envelopes. */
 };
 
 const uint8_t *dht_friend_public_key(const DHT_Friend *dht_friend)
@@ -2555,7 +2559,15 @@ DHT *new_dht(const Logger *log, const Memory *mem, const Random *rng, const Netw
     networking_registerhandler(dht->net, NET_PACKET_NODES_RESPONSE, &handle_nodes_response, dht);
     networking_registerhandler(dht->net, NET_PACKET_CRYPTO, &cryptopacket_handle, dht);
     networking_registerhandler(dht->net, NET_PACKET_LAN_DISCOVERY, &handle_lan_discovery, dht);
+    networking_registerhandler(dht->net, NET_PACKET_DHT_STORE, &dht_store_packet_handler, dht);
+    networking_registerhandler(dht->net, NET_PACKET_DHT_FIND_VALUE, &dht_find_value_packet_handler, dht);
     cryptopacket_registerhandler(dht, CRYPTO_PACKET_NAT_PING, &handle_nat_ping, dht);
+
+    dht->offline_store = dht_store_new(mem, mono_time);
+    if (dht->offline_store == nullptr) {
+        LOGGER_WARNING(log, "failed to create offline message store (continuing without)");
+        // Non-fatal: offline messaging won't work but everything else will
+    }
 
 #ifdef CHECK_ANNOUNCE_NODE
     networking_registerhandler(dht->net, NET_PACKET_DATA_SEARCH_RESPONSE, &handle_data_search_response, dht);
@@ -2635,6 +2647,11 @@ void do_dht(DHT *dht)
     do_dht_friends(dht);
     do_nat(dht);
     ping_iterate(dht->ping);
+
+    // Evict expired offline message entries
+    if (dht->offline_store != nullptr) {
+        dht_store_evict_expired(dht->offline_store);
+    }
 }
 
 void kill_dht(DHT *dht)
@@ -2647,8 +2664,11 @@ void kill_dht(DHT *dht)
     networking_registerhandler(dht->net, NET_PACKET_NODES_RESPONSE, nullptr, nullptr);
     networking_registerhandler(dht->net, NET_PACKET_CRYPTO, nullptr, nullptr);
     networking_registerhandler(dht->net, NET_PACKET_LAN_DISCOVERY, nullptr, nullptr);
+    networking_registerhandler(dht->net, NET_PACKET_DHT_STORE, nullptr, nullptr);
+    networking_registerhandler(dht->net, NET_PACKET_DHT_FIND_VALUE, nullptr, nullptr);
     cryptopacket_registerhandler(dht, CRYPTO_PACKET_NAT_PING, nullptr, nullptr);
 
+    dht_store_kill(dht->offline_store);
     shared_key_cache_free(dht->shared_keys_recv);
     shared_key_cache_free(dht->shared_keys_sent);
     ping_array_kill(dht->dht_ping_array);

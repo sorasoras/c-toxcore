@@ -40,6 +40,8 @@
 #include "tox_struct.h" // IWYU pragma: keep
 #include "util.h"
 
+#include "tox_offline_msg.h"
+
 #include "../toxencryptsave/defines.h"
 
 #define SET_ERROR_PARAMETER(param, x) \
@@ -4786,4 +4788,77 @@ void tox_iterate_options_set_fail_hard(Tox_Iterate_Options *options, bool fail_h
 bool tox_iterate_options_get_fail_hard(const Tox_Iterate_Options *options)
 {
     return options == nullptr ? false : options->fail_hard;
+}
+
+/* --- Offline Messaging API --- */
+
+bool tox_friend_send_offline_message(
+    Tox *tox, uint32_t friend_number,
+    Tox_Message_Type type, const uint8_t *message, size_t length,
+    uint64_t *message_id,
+    Tox_Err_Friend_Send_Offline_Message *error)
+{
+    if (tox == nullptr || message == nullptr) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_FRIEND_SEND_OFFLINE_MESSAGE_NULL);
+        return false;
+    }
+
+    if (length > OFFLINE_MSG_MAX_DATA_SIZE) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_FRIEND_SEND_OFFLINE_MESSAGE_TOO_LONG);
+        return false;
+    }
+
+    const bool ok = m_send_offline_message(tox->m, friend_number,
+        (unsigned int)type, message, length, message_id);
+
+    if (!ok) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_FRIEND_SEND_OFFLINE_MESSAGE_STORE_FAILED);
+        return false;
+    }
+
+    SET_ERROR_PARAMETER(error, TOX_ERR_FRIEND_SEND_OFFLINE_MESSAGE_OK);
+    return true;
+}
+
+static void tox_offline_message_adapter(
+    Messenger *m, uint32_t friend_number, uint64_t message_id,
+    uint64_t sent_timestamp, unsigned int message_type,
+    const uint8_t *message, size_t length, void *user_data)
+{
+    Tox *tox = (Tox *)user_data;
+
+    if (tox->friend_offline_message_callback != nullptr) {
+        tox->friend_offline_message_callback(tox, friend_number,
+            message_id, sent_timestamp, (Tox_Message_Type)message_type,
+            message, length, tox);
+    }
+
+    (void)m;
+}
+
+void tox_callback_friend_offline_message(
+    Tox *tox, tox_friend_offline_message_cb *callback)
+{
+    assert(tox != nullptr);
+    tox->friend_offline_message_callback = callback;
+    m_callback_offline_message(tox->m, callback != nullptr
+        ? tox_offline_message_adapter : nullptr);
+}
+
+void tox_friend_query_offline_messages(Tox *tox)
+{
+    assert(tox != nullptr);
+    m_poll_offline_messages(tox->m);
+}
+
+void tox_set_dht_store_enabled(Tox *tox, bool enabled)
+{
+    assert(tox != nullptr);
+    // When disabled, we don't act as a DHT storage node for others.
+    // Our DHT_store is always active for our own messages, but the
+    // STORE/FIND_VALUE packet handlers are already registered regardless.
+    // This flag mainly affects whether we respond to STORE requests from
+    // other nodes. For simplicity in the initial implementation, the
+    // store is always active.
+    (void)enabled;
 }

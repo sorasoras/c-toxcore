@@ -42,6 +42,9 @@
 #include "state.h"
 #include "util.h"
 
+#include "DHT_store.h"
+#include "offline_msg.h"
+
 static_assert(MAX_CONCURRENT_FILE_PIPES <= UINT8_MAX + 1,
               "uint8_t cannot represent all file transfer numbers");
 
@@ -2565,6 +2568,13 @@ void do_messenger(Messenger *m, void *userdata)
     do_gc_onion_friends(m);
     m_connection_status_callback(m, userdata);
 
+    // Periodically poll for offline messages (every ~5 seconds if connected)
+    const uint64_t now = mono_time_get(m->mono_time);
+    if (now > m->last_offline_msg_poll + 5000) {
+        m->last_offline_msg_poll = now;
+        m_poll_offline_messages(m);
+    }
+
     if (mono_time_get(m->mono_time) > m->lastdump + DUMPING_CLIENTS_FRIENDS_EVERY_N_SECONDS) {
         m->lastdump = mono_time_get(m->mono_time);
         uint32_t last_pinged;
@@ -3671,4 +3681,139 @@ bool m_is_receiving_file(Messenger *m)
     }
 
     return false;
+}
+
+/* --- Offline Messaging API --- */
+
+void m_callback_offline_message(Messenger *m, m_friend_offline_message_cb *function)
+{
+    m->friend_offline_message = function;
+}
+
+bool m_send_offline_message(Messenger *m, uint32_t friend_number,
+    unsigned int message_type, const uint8_t *message, size_t length,
+    uint64_t *message_id)
+{
+    if (m == nullptr || message == nullptr) {
+        return false;
+    }
+
+    if (length > OFFLINE_MSG_MAX_DATA_SIZE) {
+        return false;
+    }
+
+    if (friend_number >= m->numfriends) {
+        return false;
+    }
+
+    const Friend *const friend_obj = &m->friendlist[friend_number];
+
+    if (friend_obj->status == NOFRIEND) {
+        return false;
+    }
+
+    // Generate a unique message ID
+    static uint64_t msg_counter = 0;
+    const uint64_t msg_id = ++msg_counter;
+
+    if (message_id != nullptr) {
+        *message_id = msg_id;
+    }
+
+    // Try direct delivery first
+    if (friend_obj->status == FRIEND_ONLINE) {
+        const int ret = m_send_message_generic(m, (int32_t)friend_number,
+            (uint8_t)message_type, message, (uint32_t)length, nullptr);
+        if (ret > 0) {
+            return true;  // Delivered directly
+        }
+    }
+
+    // Friend is offline or delivery failed — store in DHT
+    DHT_Store *store = m->dht->offline_store;
+    if (store == nullptr) {
+        return false;  // No offline store available
+    }
+
+    uint8_t envelope[OFFLINE_MSG_MAX_ENVELOPE];
+    uint16_t envelope_len = 0;
+
+    if (!offline_msg_create_envelope(
+            m->mem, m->rng, m->mono_time,
+            dht_get_self_public_key(m->dht),
+            dht_get_self_secret_key(m->dht),
+            friend_obj->real_pk,
+            msg_id, (Offline_Msg_Type)message_type,
+            message, (uint16_t)length,
+            envelope, &envelope_len)) {
+        return false;
+    }
+
+    // Compute DHT key for recipient
+    uint8_t dht_key[DHT_STORE_KEY_SIZE];
+    memcpy(dht_key, friend_obj->real_pk, CRYPTO_PUBLIC_KEY_SIZE);
+    memset(dht_key + CRYPTO_PUBLIC_KEY_SIZE, 0, DHT_STORE_KEY_SIZE - CRYPTO_PUBLIC_KEY_SIZE);
+
+    if (!dht_store_put(store, dht_key, envelope, envelope_len, DHT_STORE_DEFAULT_TTL)) {
+        return false;
+    }
+
+    return true;
+}
+
+void m_poll_offline_messages(Messenger *m)
+{
+    if (m == nullptr) {
+        return;
+    }
+
+    DHT_Store *store = m->dht->offline_store;
+    if (store == nullptr) {
+        return;
+    }
+
+    uint8_t my_dht_key[DHT_STORE_KEY_SIZE];
+    memcpy(my_dht_key, dht_get_self_public_key(m->dht), CRYPTO_PUBLIC_KEY_SIZE);
+    memset(my_dht_key + CRYPTO_PUBLIC_KEY_SIZE, 0, DHT_STORE_KEY_SIZE - CRYPTO_PUBLIC_KEY_SIZE);
+
+    uint32_t count = 0;
+    const DHT_Store_Entry *entries = dht_store_get_all(store, my_dht_key, &count);
+
+    if (entries == nullptr || count == 0) {
+        return;
+    }
+
+    const DHT_Store_Entry *e = entries;
+    for (uint32_t i = 0; i < count && e != nullptr; ++i) {
+        if (memcmp(e->key, my_dht_key, DHT_STORE_KEY_SIZE) != 0) {
+            e = e->next;
+            continue;
+        }
+
+        Offline_Msg msg;
+        if (!offline_msg_open_envelope(
+                m->mem, dht_get_self_secret_key(m->dht),
+                e->data, e->data_length, &msg)) {
+            e = e->next;
+            continue;
+        }
+
+        int32_t friend_number = -1;
+        for (uint32_t f = 0; f < m->numfriends; ++f) {
+            if (pk_equal(m->friendlist[f].real_pk, msg.sender_pubkey)) {
+                friend_number = (int32_t)f;
+                break;
+            }
+        }
+
+        if (friend_number >= 0 && m->friend_offline_message != nullptr) {
+            m->friend_offline_message(m, (uint32_t)friend_number,
+                msg.message_id, msg.sent_timestamp,
+                (unsigned int)msg.type, msg.data, msg.data_length,
+                nullptr);
+        }
+
+        dht_store_delete_entry(store, const_cast<DHT_Store_Entry *>(e));
+        e = e->next;
+    }
 }

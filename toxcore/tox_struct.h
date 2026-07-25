@@ -66,6 +66,8 @@ struct Tox {
     tox_group_join_fail_cb *_Nullable group_join_fail_callback;
     tox_group_moderation_cb *_Nullable group_moderation_callback;
 
+    tox_friend_offline_message_cb *_Nullable friend_offline_message_callback;
+
     void *_Nullable toxav_object; // workaround to store a ToxAV object (setter and getter functions are available)
 };
 

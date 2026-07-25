@@ -209,6 +209,9 @@ typedef void m_conference_invite_cb(Messenger *_Nonnull m, uint32_t friend_numbe
                                     void *_Nullable user_data);
 typedef void m_group_invite_cb(const Messenger *_Nonnull m, uint32_t friend_number, const uint8_t *_Nonnull invite_data, size_t length,
                                const uint8_t *_Nullable group_name, size_t group_name_length, void *_Nullable user_data);
+typedef void m_friend_offline_message_cb(Messenger *_Nonnull m, uint32_t friend_number, uint64_t message_id,
+        uint64_t sent_timestamp, unsigned int message_type, const uint8_t *_Nonnull message, size_t length,
+        void *_Nullable user_data);
 
 typedef struct Friend {
     uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
@@ -311,6 +314,10 @@ struct Messenger {
 
     m_self_connection_status_cb *_Nullable core_connection_change;
     Onion_Connection_Status last_connection_status;
+
+    m_friend_offline_message_cb *_Nullable friend_offline_message;
+
+    uint64_t last_offline_msg_poll;  /**< Last time we polled for offline messages. */
 
     Messenger_Options options;
 };
@@ -590,6 +597,22 @@ void m_callback_conference_invite(Messenger *_Nonnull m, m_conference_invite_cb 
 /* Set the callback for group invites.
  */
 void m_callback_group_invite(Messenger *_Nonnull m, m_group_invite_cb *_Nullable function);
+
+/** @brief Set the callback for offline message reception. */
+void m_callback_offline_message(Messenger *_Nonnull m, m_friend_offline_message_cb *_Nullable function);
+
+/** @brief Send a message that is stored in the DHT if the friend is offline.
+ *
+ * @param message_id On success, set to a unique identifier for this message.
+ * @return true on success.
+ */
+bool m_send_offline_message(Messenger *_Nonnull m, uint32_t friend_number,
+    unsigned int message_type, const uint8_t *_Nonnull message, size_t length,
+    uint64_t *_Nullable message_id);
+
+/** @brief Poll the DHT for offline messages addressed to us. */
+void m_poll_offline_messages(Messenger *_Nonnull m);
+
 /** @brief Send a conference invite packet.
  *
  * return true on success
