@@ -272,7 +272,7 @@ void tox_events_handle_file_recv_control(uint32_t friend_number, uint32_t file_n
 void tox_events_handle_friend_connection_status(uint32_t friend_number, Tox_Connection connection_status, Tox_Events_State *_Nonnull state);
 void tox_events_handle_friend_lossless_packet(uint32_t friend_number, const uint8_t *_Nonnull data, size_t length, Tox_Events_State *_Nonnull state);
 void tox_events_handle_friend_lossy_packet(uint32_t friend_number, const uint8_t *_Nonnull data, size_t length, Tox_Events_State *_Nonnull state);
-void tox_events_handle_friend_message(uint32_t friend_number, Tox_Message_Type type, const uint8_t *_Nonnull message, size_t length, Tox_Events_State *_Nonnull state);
+void tox_events_handle_friend_message(uint32_t friend_number, uint64_t sent_timestamp, Tox_Message_Type type, const uint8_t *_Nonnull message, size_t length, Tox_Events_State *_Nonnull state);
 void tox_events_handle_friend_name(uint32_t friend_number, const uint8_t *_Nonnull name, size_t length, Tox_Events_State *_Nonnull state);
 void tox_events_handle_friend_read_receipt(uint32_t friend_number, uint32_t message_id, Tox_Events_State *_Nonnull state);
 void tox_events_handle_friend_request(const uint8_t *_Nonnull public_key, const uint8_t *_Nonnull message, size_t length, Tox_Events_State *_Nonnull state);

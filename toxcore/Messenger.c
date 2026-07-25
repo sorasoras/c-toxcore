@@ -585,8 +585,8 @@ int m_send_message_generic(Messenger *m, int32_t friendnumber, uint8_t type, con
         return -1;
     }
 
-    if (length >= MAX_CRYPTO_DATA_SIZE) {
-        LOGGER_WARNING(m->log, "message length %u is too large", length);
+    if (length + 8 >= MAX_CRYPTO_DATA_SIZE) {
+        LOGGER_WARNING(m->log, "message length %u is too large (with timestamp overhead)", length);
         return -2;
     }
 
@@ -595,14 +595,15 @@ int m_send_message_generic(Messenger *m, int32_t friendnumber, uint8_t type, con
         return -3;
     }
 
-    VLA(uint8_t, packet, length + 1);
+    VLA(uint8_t, packet, length + 1 + 8);
     packet[0] = PACKET_ID_MESSAGE + type;
+    net_pack_u64(packet + 1, mono_time_get(m->mono_time));
 
     assert(message != nullptr);
-    memcpy(packet + 1, message, length);
+    memcpy(packet + 1 + 8, message, length);
 
     const int64_t packet_num = write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
-                               m->friendlist[friendnumber].friendcon_id), packet, length + 1, false);
+                               m->friendlist[friendnumber].friendcon_id), packet, length + 1 + 8, false);
 
     if (packet_num == -1) {
         return -4;
@@ -2091,8 +2092,24 @@ static int m_handle_packet_message(Messenger *_Nonnull m, const int friendcon_id
         return 0;
     }
 
-    const uint8_t *message = data;
-    const uint16_t message_length = data_length;
+    uint64_t sent_timestamp = 0;
+    const uint8_t *message;
+    uint16_t message_length;
+
+    // Backward compat: if data_length >= 8, first 8 bytes are timestamp
+    if (data_length >= 8) {
+        net_unpack_u64(data, &sent_timestamp);
+        message = data + 8;
+        message_length = data_length - 8;
+    } else {
+        // Old-format message without timestamp
+        message = data;
+        message_length = data_length;
+    }
+
+    if (message_length == 0) {
+        return 0;
+    }
 
     /* Make sure the NULL terminator is present. */
     VLA(uint8_t, message_terminated, message_length + 1);
@@ -2100,7 +2117,8 @@ static int m_handle_packet_message(Messenger *_Nonnull m, const int friendcon_id
     message_terminated[message_length] = 0;
 
     if (m->friend_message != nullptr) {
-        m->friend_message(m, friendcon_id, message_type, message_terminated, message_length, userdata);
+        m->friend_message(m, friendcon_id, sent_timestamp, message_type,
+                          message_terminated, message_length, userdata);
     }
 
     return 0;

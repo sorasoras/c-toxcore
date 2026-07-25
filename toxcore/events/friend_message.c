@@ -27,6 +27,7 @@
 
 struct Tox_Event_Friend_Message {
     uint32_t friend_number;
+    uint64_t sent_timestamp;
     Tox_Message_Type type;
     uint8_t *_Nullable message;
     uint32_t message_length;
@@ -41,6 +42,17 @@ uint32_t tox_event_friend_message_get_friend_number(const Tox_Event_Friend_Messa
 {
     assert(friend_message != nullptr);
     return friend_message->friend_number;
+}
+
+static void tox_event_friend_message_set_sent_timestamp(Tox_Event_Friend_Message *_Nonnull friend_message, uint64_t sent_timestamp)
+{
+    assert(friend_message != nullptr);
+    friend_message->sent_timestamp = sent_timestamp;
+}
+uint64_t tox_event_friend_message_get_sent_timestamp(const Tox_Event_Friend_Message *friend_message)
+{
+    assert(friend_message != nullptr);
+    return friend_message->sent_timestamp;
 }
 
 static void tox_event_friend_message_set_type(Tox_Event_Friend_Message *_Nonnull friend_message, Tox_Message_Type type)
@@ -111,8 +123,9 @@ static void tox_event_friend_message_destruct(Tox_Event_Friend_Message *_Nonnull
 bool tox_event_friend_message_pack(
     const Tox_Event_Friend_Message *event, Bin_Pack *bp)
 {
-    return bin_pack_array(bp, 3)
+    return bin_pack_array(bp, 4)
            && bin_pack_u32(bp, event->friend_number)
+           && bin_pack_u64(bp, event->sent_timestamp)
            && tox_message_type_pack(event->type, bp)
            && bin_pack_bin(bp, event->message, event->message_length);
 }
@@ -120,11 +133,12 @@ bool tox_event_friend_message_pack(
 static bool tox_event_friend_message_unpack_into(Tox_Event_Friend_Message *_Nonnull event, Bin_Unpack *_Nonnull bu)
 {
     assert(event != nullptr);
-    if (!bin_unpack_array_fixed(bu, 3, nullptr)) {
+    if (!bin_unpack_array_fixed(bu, 4, nullptr)) {
         return false;
     }
 
     return bin_unpack_u32(bu, &event->friend_number)
+           && bin_unpack_u64(bu, &event->sent_timestamp)
            && tox_message_type_unpack(&event->type, bu)
            && bin_unpack_bin(bu, &event->message, &event->message_length);
 }
@@ -218,6 +232,7 @@ static Tox_Event_Friend_Message *_Nullable tox_event_friend_message_alloc(Tox_Ev
 
 void tox_events_handle_friend_message(
     uint32_t friend_number,
+    uint64_t sent_timestamp,
     Tox_Message_Type type,
     const uint8_t *message, size_t length,
     Tox_Events_State *state)
@@ -229,6 +244,7 @@ void tox_events_handle_friend_message(
     }
 
     tox_event_friend_message_set_friend_number(friend_message, friend_number);
+    tox_event_friend_message_set_sent_timestamp(friend_message, sent_timestamp);
     tox_event_friend_message_set_type(friend_message, type);
     if (!tox_event_friend_message_set_message(friend_message, state->mem, message, length)) {
         tox_event_friend_message_free(friend_message, state->mem);
@@ -244,6 +260,7 @@ void tox_events_handle_friend_message_dispatch(Tox *tox, const Tox_Event_Friend_
     }
 
     tox_unlock(tox);
-    tox->friend_message_callback(tox, event->friend_number, event->type, event->message, event->message_length, user_data);
+    tox->friend_message_callback(tox, event->friend_number, event->sent_timestamp,
+                                 event->type, event->message, event->message_length, user_data);
     tox_lock(tox);
 }

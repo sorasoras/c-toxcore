@@ -159,11 +159,13 @@ static void tox_friend_request_handler(Messenger *m, const Tox_Public_Key public
 }
 
 static m_friend_message_cb tox_friend_message_handler;
-static void tox_friend_message_handler(Messenger *m, uint32_t friend_number, unsigned int message_type,
-                                       const uint8_t *message, size_t length, void *user_data)
+static void tox_friend_message_handler(Messenger *m, uint32_t friend_number, uint64_t sent_timestamp,
+                                       unsigned int message_type, const uint8_t *message, size_t length,
+                                       void *user_data)
 {
     struct Tox_Userdata *tox_data = (struct Tox_Userdata *)user_data;
-    tox_events_handle_friend_message(friend_number, (Tox_Message_Type)message_type, message, length,
+    tox_events_handle_friend_message(friend_number, sent_timestamp,
+                                     (Tox_Message_Type)message_type, message, length,
                                      tox_data->state);
 }
 

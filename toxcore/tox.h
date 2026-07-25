@@ -1490,13 +1490,17 @@ void tox_callback_friend_request(Tox *tox, tox_friend_request_cb *callback);
 
 /**
  * @param friend_number The friend number of the friend who sent the message.
+ * @param timestamp A monotonically increasing time in seconds when the message
+ *   was sent. The starting point is implementation defined. This value is 0
+ *   when the sender is using an older version of the library that does not
+ *   include timestamps.
  * @param type The type of the message (normal, action, ...).
  * @param message The message data they sent.
  * @param length The size of the message byte array.
  */
 typedef void tox_friend_message_cb(
-    Tox *tox, Tox_Friend_Number friend_number, Tox_Message_Type type,
-    const uint8_t message[], size_t length, void *user_data);
+    Tox *tox, Tox_Friend_Number friend_number, uint64_t timestamp,
+    Tox_Message_Type type, const uint8_t message[], size_t length, void *user_data);
 
 /**
  * @brief Set the callback for the `friend_message` event.

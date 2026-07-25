@@ -149,6 +149,8 @@ uint32_t tox_event_friend_message_get_message_length(
     const Tox_Event_Friend_Message *_Nonnull friend_message);
 const uint8_t *_Nullable tox_event_friend_message_get_message(
     const Tox_Event_Friend_Message *_Nonnull friend_message);
+uint64_t tox_event_friend_message_get_sent_timestamp(
+    const Tox_Event_Friend_Message *_Nonnull friend_message);
 
 typedef struct Tox_Event_Friend_Name Tox_Event_Friend_Name;
 const uint8_t *_Nullable tox_event_friend_name_get_name(

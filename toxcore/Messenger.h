@@ -184,8 +184,9 @@ typedef void m_self_connection_status_cb(Messenger *_Nonnull m, Onion_Connection
 typedef void m_friend_status_cb(Messenger *_Nonnull m, uint32_t friend_number, unsigned int status, void *_Nullable user_data);
 typedef void m_friend_connection_status_cb(Messenger *_Nonnull m, uint32_t friend_number, unsigned int connection_status,
         void *_Nullable user_data);
-typedef void m_friend_message_cb(Messenger *_Nonnull m, uint32_t friend_number, unsigned int message_type,
-                                 const uint8_t *_Nonnull message, size_t length, void *_Nullable user_data);
+typedef void m_friend_message_cb(Messenger *_Nonnull m, uint32_t friend_number, uint64_t sent_timestamp,
+                                 unsigned int message_type, const uint8_t *_Nonnull message, size_t length,
+                                 void *_Nullable user_data);
 typedef void m_file_recv_control_cb(Messenger *_Nonnull m, uint32_t friend_number, uint32_t file_number, unsigned int control,
                                     void *_Nullable user_data);
 typedef void m_friend_request_cb(Messenger *_Nonnull m, const uint8_t *_Nonnull public_key, const uint8_t *_Nonnull message, size_t length,
