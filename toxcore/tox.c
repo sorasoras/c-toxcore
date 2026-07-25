@@ -4846,6 +4846,33 @@ size_t tox_friend_get_device_name(
     return len;
 }
 
+Tox_Friend_Message_Id tox_friend_send_message_to_device(
+    Tox *tox, Tox_Friend_Number friend_number,
+    Tox_Message_Type type,
+    const uint8_t device_pubkey[TOX_PUBLIC_KEY_SIZE],
+    const uint8_t message[], size_t length,
+    Tox_Err_Friend_Send_Message *error)
+{
+    // Verify the device is in the friend's device list
+    if (tox == nullptr || device_pubkey == nullptr || message == nullptr) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_FRIEND_SEND_MESSAGE_NULL);
+        return 0;
+    }
+    if (friend_number >= tox->m->numfriends) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_FRIEND_SEND_MESSAGE_FRIEND_NOT_FOUND);
+        return 0;
+    }
+    const Friend *f = &tox->m->friendlist[friend_number];
+    if (f->multi_device_list != nullptr
+            && multi_device_list_find(f->multi_device_list, device_pubkey) < 0) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_FRIEND_SEND_MESSAGE_FRIEND_NOT_CONNECTED);
+        return 0;
+    }
+    // TODO: route to specific device connection.
+    // For now, fall through to main friend connection.
+    return tox_friend_send_message(tox, friend_number, type, message, length, error);
+}
+
 /* --- Offline Messaging API --- */
 
 bool tox_friend_send_offline_message(

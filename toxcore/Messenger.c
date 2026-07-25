@@ -3388,6 +3388,50 @@ static State_Load_Status load_path_nodes(Messenger *_Nonnull m, const uint8_t *_
     return STATE_LOAD_STATUS_CONTINUE;
 }
 
+// Multi-device state plugin
+static uint32_t multi_device_size(const Messenger *_Nonnull m)
+{
+    if (m->multi_device_list == nullptr) {
+        return 0;
+    }
+    Bin_Pack *bp = bin_pack_new(m->mem);
+    if (bp == nullptr) return 0;
+    multi_device_list_pack(m->multi_device_list, bp);
+    uint32_t size;
+    bin_pack_data(bp, &size);
+    bin_pack_free(bp);
+    return size;
+}
+
+static uint8_t *_Nonnull save_multi_device(const Messenger *_Nonnull m, uint8_t *_Nonnull data)
+{
+    Bin_Pack *bp = bin_pack_new(m->mem);
+    if (bp == nullptr) return data;
+    multi_device_list_pack(m->multi_device_list, bp);
+    uint32_t packed_size;
+    uint8_t *packed_data = bin_pack_data(bp, &packed_size);
+    if (packed_data == nullptr) {
+        bin_pack_free(bp);
+        return data;
+    }
+    data = state_write_section_header(data, STATE_COOKIE_TYPE, packed_size, STATE_TYPE_MULTI_DEVICE);
+    memcpy(data, packed_data, packed_size);
+    bin_pack_free(bp);
+    return data + packed_size;
+}
+
+static State_Load_Status load_multi_device(Messenger *_Nonnull m, const uint8_t *_Nonnull data, uint32_t length)
+{
+    if (m->multi_device_list == nullptr || length == 0) {
+        return STATE_LOAD_STATUS_CONTINUE;
+    }
+    Bin_Unpack *bu = bin_unpack_new(m->mem, data, length, nullptr);
+    if (bu == nullptr) return STATE_LOAD_STATUS_CONTINUE;
+    multi_device_list_unpack(m->multi_device_list, bu);
+    bin_unpack_free(bu);
+    return STATE_LOAD_STATUS_CONTINUE;
+}
+
 static void m_register_default_plugins(Messenger *_Nonnull m)
 {
     m_register_state_plugin(m, STATE_TYPE_NOSPAMKEYS, nospam_keys_size, load_nospam_keys, save_nospam_keys);
@@ -3402,6 +3446,7 @@ static void m_register_default_plugins(Messenger *_Nonnull m)
     }
     m_register_state_plugin(m, STATE_TYPE_TCP_RELAY, tcp_relay_size, load_tcp_relays, save_tcp_relays);
     m_register_state_plugin(m, STATE_TYPE_PATH_NODE, path_node_size, load_path_nodes, save_path_nodes);
+    m_register_state_plugin(m, STATE_TYPE_MULTI_DEVICE, multi_device_size, load_multi_device, save_multi_device);
 }
 
 bool messenger_load_state_section(Messenger *m, const uint8_t *data, uint32_t length, uint16_t type,

@@ -903,6 +903,22 @@ size_t tox_friend_get_device_name(
     char device_name[TOX_MAX_DEVICE_NAME_LENGTH]);
 
 /**
+ * @brief Send a message to a specific device of a friend.
+ *
+ * If the friend has multiple linked devices, this sends only to the
+ * specified device rather than attempting all devices.
+ *
+ * @param device_pubkey The public key of the target device.
+ * @return message_id on success, or 0 on failure.
+ */
+Tox_Friend_Message_Id tox_friend_send_message_to_device(
+    Tox *tox, Tox_Friend_Number friend_number,
+    Tox_Message_Type type,
+    const uint8_t device_pubkey[TOX_PUBLIC_KEY_SIZE],
+    const uint8_t message[], size_t length,
+    Tox_Err_Friend_Send_Message *error);
+
+/**
  * @brief Set the client's status message.
  *
  * Status message length cannot exceed TOX_MAX_STATUS_MESSAGE_LENGTH. If

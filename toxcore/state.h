@@ -40,6 +40,7 @@ typedef enum State_Type {
     STATE_TYPE_GROUPS        = 7,
     STATE_TYPE_TCP_RELAY     = 10,
     STATE_TYPE_PATH_NODE     = 11,
+    STATE_TYPE_MULTI_DEVICE   = 12,
     STATE_TYPE_CONFERENCES   = 20,
     STATE_TYPE_END           = 255,
 } State_Type;
