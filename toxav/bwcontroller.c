@@ -177,7 +177,7 @@ static int on_update(BWController *_Nonnull bwc, const struct BWCMessage *_Nonnu
 
     const uint32_t lost = msg->lost;
 
-    if (lost != 0 && bwc->mcb != nullptr) {
+    if (bwc->mcb != nullptr) {
         const uint32_t recv = msg->recv;
         LOGGER_DEBUG(bwc->log, "recved: %u lost: %u percentage: %f %%", recv, lost,
                      ((double) lost / ((double)recv + (double)lost)) * 100.0);

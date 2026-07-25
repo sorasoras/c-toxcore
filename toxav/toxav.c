@@ -1279,10 +1279,30 @@ static void callback_bwc(BWController *bwc, Tox_Friend_Number friend_number, flo
 
     LOGGER_DEBUG(call->av->log, "Reported loss of %f%%", (double)loss * 100);
 
-    /* if less than 10% data loss we do nothing! */
-    if (loss < 0.1F) {
+    /* AIMD: multiplicative decrease when loss is high, additive increase when low */
+    if (loss < 0.05F) {
+        /* Low loss: additively increase bitrate to recover */
+        const uint32_t increase = loss > 0.0F ? 2000u : 4000u;  // Faster on clean windows
+
+        if (call->video_bit_rate != 0) {
+            if (call->av->vbcb != nullptr) {
+                const uint32_t suggested = call->video_bit_rate + increase;
+                call->av->vbcb(call->av, friend_number, suggested, call->av->vbcb_user_data);
+            }
+        } else if (call->audio_bit_rate != 0) {
+            if (call->av->abcb != nullptr) {
+                const uint32_t suggested = call->audio_bit_rate + increase;
+                call->av->abcb(call->av, friend_number, suggested, call->av->abcb_user_data);
+            }
+        }
         return;
     }
+
+    if (loss < 0.1F) {
+        return;  /* Stable zone (5-10% loss): hold current rate */
+    }
+
+    /* High loss (>10%): multiplicatively decrease */
 
     pthread_mutex_lock(call->av->mutex);
 

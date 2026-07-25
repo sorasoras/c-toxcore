@@ -34,7 +34,10 @@
 /** Ping interval in seconds for each random sending of a nodes request. */
 #define NODES_REQUEST_INTERVAL 20
 
-#define MAX_PUNCHING_PORTS 48
+#define MAX_PUNCHING_PORTS 12
+
+/** Maximum total hole-punch packets sent per do_dht iteration (global budget) */
+#define MAX_PUNCH_PACKETS_PER_ITERATION 24
 
 /** Interval in seconds between punching attempts*/
 #define PUNCH_INTERVAL 3
@@ -147,6 +150,8 @@ struct DHT {
     dht_nodes_response_cb *_Nullable nodes_response_callback;
 
     DHT_Store *_Nullable offline_store;  /**< Storage for offline message envelopes. */
+
+    uint16_t punch_packets_sent;  /**< Punch packets sent this iteration (budget tracker). */
 };
 
 const uint8_t *dht_friend_public_key(const DHT_Friend *dht_friend)
@@ -1812,11 +1817,18 @@ static void do_dht_friends(DHT *_Nonnull dht)
  */
 static void do_close(DHT *_Nonnull dht)
 {
-    for (size_t i = 0; i < dht->num_to_bootstrap; ++i) {
-        dht_send_nodes_request(dht, &dht->to_bootstrap[i].ip_port, dht->to_bootstrap[i].public_key, dht->self_public_key);
-    }
+    // Only bootstrap every 4th iteration to avoid packet spam when
+    // to_bootstrap accumulates offline nodes that never respond
+    static uint8_t bootstrap_skip = 0;
+    if (++bootstrap_skip >= 4) {
+        bootstrap_skip = 0;
 
-    dht->num_to_bootstrap = 0;
+        for (size_t i = 0; i < dht->num_to_bootstrap; ++i) {
+            dht_send_nodes_request(dht, &dht->to_bootstrap[i].ip_port, dht->to_bootstrap[i].public_key, dht->self_public_key);
+        }
+
+        dht->num_to_bootstrap = 0;
+    }
 
     const uint8_t not_killed = do_ping_and_sendnode_requests(
                                    dht, &dht->close_last_nodes_request, dht->self_public_key, dht->close_clientlist, LCLIENT_LIST, &dht->close_bootstrap_times,
@@ -2265,6 +2277,10 @@ static void punch_holes(DHT *_Nonnull dht, const IP *_Nonnull ip, const uint16_t
         return;
     }
 
+    if (dht->punch_packets_sent >= MAX_PUNCH_PACKETS_PER_ITERATION) {
+        return;  // Global punch budget exhausted this iteration
+    }
+
     const uint16_t first_port = port_list[0];
     uint16_t port_candidate;
 
@@ -2279,6 +2295,7 @@ static void punch_holes(DHT *_Nonnull dht, const IP *_Nonnull ip, const uint16_t
         ip_copy(&pinging.ip, ip);
         pinging.port = net_htons(first_port);
         ping_send_request(dht->ping, &pinging, dht->friends_list[friend_num].public_key);
+        dht->punch_packets_sent++;
     } else {
         uint16_t i;
         for (i = 0; i < MAX_PUNCHING_PORTS; ++i) {
@@ -2292,6 +2309,10 @@ static void punch_holes(DHT *_Nonnull dht, const IP *_Nonnull ip, const uint16_t
             ip_copy(&pinging.ip, ip);
             pinging.port = net_htons(port);
             ping_send_request(dht->ping, &pinging, dht->friends_list[friend_num].public_key);
+            dht->punch_packets_sent++;
+            if (dht->punch_packets_sent >= MAX_PUNCH_PACKETS_PER_ITERATION) {
+                break;  // Global budget exhausted
+            }
         }
 
         dht->friends_list[friend_num].nat.punching_index += i;
@@ -2318,6 +2339,8 @@ static void punch_holes(DHT *_Nonnull dht, const IP *_Nonnull ip, const uint16_t
 static void do_nat(DHT *_Nonnull dht)
 {
     const uint64_t temp_time = mono_time_get(dht->mono_time);
+
+    dht->punch_packets_sent = 0;  // Reset budget for this iteration
 
     for (uint32_t i = 0; i < dht->num_friends; ++i) {
         IP_Port ip_list[MAX_FRIEND_CLIENTS];
