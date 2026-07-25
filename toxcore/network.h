@@ -39,6 +39,9 @@ typedef enum Net_Packet_Type {
     NET_PACKET_CRYPTO               = 0x20, /* Encrypted data packet ID. */
     NET_PACKET_LAN_DISCOVERY        = 0x21, /* LAN discovery packet ID. */
 
+    NET_PACKET_DHT_STORE            = 0x22, /* DHT store value request (offline msgs). */
+    NET_PACKET_DHT_FIND_VALUE       = 0x23, /* DHT find value request (offline msgs). */
+
     NET_PACKET_GC_HANDSHAKE         = 0x5a, /* Group chat handshake packet ID */
     NET_PACKET_GC_LOSSLESS          = 0x5b, /* Group chat lossless packet ID */
     NET_PACKET_GC_LOSSY             = 0x5c, /* Group chat lossy packet ID */
