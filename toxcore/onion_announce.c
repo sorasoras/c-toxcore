@@ -686,7 +686,7 @@ static int handle_data_request(void *_Nonnull object, const IP_Port *_Nonnull so
     }
 
     const uint16_t data_size = length - (CRYPTO_PUBLIC_KEY_SIZE + ONION_RETURN_3);
-    VLA(uint8_t, data, data_size);
+    uint8_t data[MAX_UDP_PACKET_SIZE];
     data[0] = NET_PACKET_ONION_DATA_RESPONSE;
     memcpy(data + 1, packet + 1 + CRYPTO_PUBLIC_KEY_SIZE, length - (1 + CRYPTO_PUBLIC_KEY_SIZE + ONION_RETURN_3));
 

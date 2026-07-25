@@ -195,7 +195,7 @@ int create_onion_packet(const Memory *mem, const Random *rng, uint8_t *packet, u
     }
 
     const uint16_t step1_size = SIZE_IPPORT + length;
-    VLA(uint8_t, step1, step1_size);
+    uint8_t step1[ONION_MAX_PACKET_SIZE];
 
     ipport_pack(step1, dest);
     memcpy(step1 + SIZE_IPPORT, data, length);
@@ -204,7 +204,7 @@ int create_onion_packet(const Memory *mem, const Random *rng, uint8_t *packet, u
     random_nonce(rng, nonce);
 
     const uint16_t step2_size = SIZE_IPPORT + SEND_BASE + length;
-    VLA(uint8_t, step2, step2_size);
+    uint8_t step2[ONION_MAX_PACKET_SIZE];
     ipport_pack(step2, &path->ip_port3);
     memcpy(step2 + SIZE_IPPORT, path->public_key3, CRYPTO_PUBLIC_KEY_SIZE);
 
@@ -216,7 +216,7 @@ int create_onion_packet(const Memory *mem, const Random *rng, uint8_t *packet, u
     }
 
     const uint16_t step3_size = SIZE_IPPORT + SEND_BASE * 2 + length;
-    VLA(uint8_t, step3, step3_size);
+    uint8_t step3[ONION_MAX_PACKET_SIZE];
     ipport_pack(step3, &path->ip_port2);
     memcpy(step3 + SIZE_IPPORT, path->public_key2, CRYPTO_PUBLIC_KEY_SIZE);
     len = encrypt_data_symmetric(mem, path->shared_key2, nonce, step2, step2_size,
@@ -258,7 +258,7 @@ int create_onion_packet_tcp(const Memory *mem, const Random *rng, uint8_t *packe
     }
 
     const uint16_t step1_size = SIZE_IPPORT + length;
-    VLA(uint8_t, step1, step1_size);
+    uint8_t step1[ONION_MAX_PACKET_SIZE];
 
     ipport_pack(step1, dest);
     memcpy(step1 + SIZE_IPPORT, data, length);
@@ -267,7 +267,7 @@ int create_onion_packet_tcp(const Memory *mem, const Random *rng, uint8_t *packe
     random_nonce(rng, nonce);
 
     const uint16_t step2_size = SIZE_IPPORT + SEND_BASE + length;
-    VLA(uint8_t, step2, step2_size);
+    uint8_t step2[ONION_MAX_PACKET_SIZE];
     ipport_pack(step2, &path->ip_port3);
     memcpy(step2 + SIZE_IPPORT, path->public_key3, CRYPTO_PUBLIC_KEY_SIZE);
 
@@ -307,7 +307,7 @@ int send_onion_response(const Logger *log, const Networking_Core *net,
     }
 
     const uint16_t packet_size = 1 + RETURN_3 + length;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     packet[0] = NET_PACKET_ONION_RECV_3;
     memcpy(packet + 1, ret, RETURN_3);
     memcpy(packet + 1 + RETURN_3, data, length);

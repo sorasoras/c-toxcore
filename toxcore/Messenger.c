@@ -596,7 +596,7 @@ int m_send_message_generic(Messenger *m, int32_t friendnumber, uint8_t type, con
         return -3;
     }
 
-    VLA(uint8_t, packet, length + 1 + 8);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     packet[0] = PACKET_ID_MESSAGE + type;
     net_pack_u64(packet + 1, mono_time_get(m->mono_time));
 
@@ -634,7 +634,7 @@ static bool write_cryptpacket_id(const Messenger *_Nonnull m, int32_t friendnumb
         return false;
     }
 
-    VLA(uint8_t, packet, length + 1);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     packet[0] = packet_id;
 
     assert(data != nullptr);
@@ -1283,7 +1283,7 @@ static bool file_sendrequest(const Messenger *_Nonnull m, int32_t friendnumber, 
     }
 
     const uint16_t packet_size = 1 + sizeof(file_type) + sizeof(filesize) + FILE_ID_LENGTH + filename_length;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     packet[0] = filenumber;
     file_type = net_htonl(file_type);
     memcpy(packet + 1, &file_type, sizeof(file_type));
@@ -1360,7 +1360,7 @@ static bool send_file_control_packet(const Messenger *_Nonnull m, int32_t friend
     }
 
     const uint16_t packet_size = 3 + data_length;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
 
     packet[0] = inbound ? 1 : 0;
     packet[1] = filenumber;
@@ -1559,7 +1559,7 @@ static int64_t send_file_data_packet(const Messenger *_Nonnull m, int32_t friend
     }
 
     const uint16_t packet_size = 2 + length;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     packet[0] = PACKET_ID_FILE_DATA;
     packet[1] = filenumber;
 
@@ -2069,7 +2069,7 @@ static int m_handle_packet_nickname(Messenger *_Nonnull m, const int friendcon_i
     }
 
     /* Make sure the NULL terminator is present. */
-    VLA(uint8_t, data_terminated, data_length + 1);
+    uint8_t data_terminated[MAX_CRYPTO_DATA_SIZE + 1];
     memcpy(data_terminated, data, data_length);
     data_terminated[data_length] = 0;
 
@@ -2091,7 +2091,7 @@ static int m_handle_packet_statusmessage(Messenger *_Nonnull m, const int friend
     }
 
     /* Make sure the NULL terminator is present. */
-    VLA(uint8_t, data_terminated, data_length + 1);
+    uint8_t data_terminated[MAX_CRYPTO_DATA_SIZE + 1];
     memcpy(data_terminated, data, data_length);
     data_terminated[data_length] = 0;
 
@@ -2233,7 +2233,7 @@ static int m_handle_packet_message(Messenger *_Nonnull m, const int friendcon_id
     }
 
     /* Make sure the NULL terminator is present. */
-    VLA(uint8_t, message_terminated, message_length + 1);
+    uint8_t message_terminated[MAX_CRYPTO_DATA_SIZE + 1];
     memcpy(message_terminated, message, message_length);
     message_terminated[message_length] = 0;
 
@@ -2299,7 +2299,7 @@ static int m_handle_packet_file_sendrequest(Messenger *_Nonnull m, const int fri
     ft->paused = FILE_PAUSE_NOT;
     memcpy(ft->id, data + 1 + sizeof(uint32_t) + sizeof(uint64_t), FILE_ID_LENGTH);
 
-    VLA(uint8_t, filename_terminated, filename_length + 1);
+    uint8_t filename_terminated[MAX_CRYPTO_DATA_SIZE + 1];
     const uint8_t *filename = nullptr;
 
     if (filename_length > 0) {
@@ -2747,8 +2747,8 @@ void do_messenger(Messenger *m, void *userdata)
 
         /* dht contains additional "friends" (requests) */
         const uint32_t num_dhtfriends = dht_get_num_friends(m->dht);
-        VLA(int32_t, m2dht, num_dhtfriends);
-        VLA(int32_t, dht2m, num_dhtfriends);
+        int32_t *m2dht = (int32_t *)mem_alloc(m->mem, num_dhtfriends * sizeof(int32_t));
+        int32_t *dht2m = (int32_t *)mem_alloc(m->mem, num_dhtfriends * sizeof(int32_t));
 
         for (uint32_t friend_idx = 0; friend_idx < num_dhtfriends; ++friend_idx) {
             m2dht[friend_idx] = -1;

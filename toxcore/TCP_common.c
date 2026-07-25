@@ -153,7 +153,7 @@ int write_packet_tcp_secure_connection(const Logger *logger, TCP_Connection *con
     }
 
     const uint16_t packet_size = sizeof(uint16_t) + length + CRYPTO_MAC_SIZE;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
 
     uint16_t c_length = net_htons(length + CRYPTO_MAC_SIZE);
     memcpy(packet, &c_length, sizeof(uint16_t));
@@ -291,7 +291,7 @@ int read_packet_tcp_secure_connection(
         return -1;
     }
 
-    VLA(uint8_t, data_encrypted, (int) *next_packet_length);
+    uint8_t data_encrypted[MAX_UDP_PACKET_SIZE];
     const int len_packet = read_tcp_packet(logger, mem, ns, sock, data_encrypted, *next_packet_length, ip_port);
 
     if (len_packet == -1) {

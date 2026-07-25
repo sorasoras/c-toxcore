@@ -25,7 +25,7 @@ void generate_timed_auth(const Mono_Time *mono_time, uint16_t timeout, const uin
                          const uint8_t *data, uint16_t length, uint8_t *timed_auth)
 {
     const uint16_t to_hash_size = sizeof(uint64_t) + length;
-    VLA(uint8_t, to_hash, to_hash_size);
+    uint8_t to_hash[MAX_UDP_PACKET_SIZE];
     create_timed_auth_to_hash(mono_time, timeout, false, data, length, to_hash);
     crypto_hmac(timed_auth, key, to_hash, to_hash_size);
 }
@@ -34,7 +34,7 @@ bool check_timed_auth(const Mono_Time *mono_time, uint16_t timeout, const uint8_
                       uint16_t length, const uint8_t *timed_auth)
 {
     const uint16_t to_hash_size = sizeof(uint64_t) + length;
-    VLA(uint8_t, to_hash, to_hash_size);
+    uint8_t to_hash[MAX_UDP_PACKET_SIZE];
 
     for (uint8_t i = 0; i < 2; ++i) {
         create_timed_auth_to_hash(mono_time, timeout, i != 0, data, length, to_hash);

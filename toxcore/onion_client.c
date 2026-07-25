@@ -1080,7 +1080,7 @@ static int handle_announce_response_old(void *_Nonnull object, const IP_Port *_N
     }
 
     const uint16_t plain_size = 1 + ONION_PING_ID_SIZE + len_nodes;
-    VLA(uint8_t, plain, plain_size);
+    uint8_t plain[MAX_UDP_PACKET_SIZE];
     int len;
     const uint16_t nonce_start = 1 + ONION_ANNOUNCE_SENDBACK_DATA_LENGTH;
     const uint16_t ciphertext_start = nonce_start + CRYPTO_NONCE_SIZE;
@@ -1154,7 +1154,7 @@ static int handle_data_response(void *_Nonnull object, const IP_Port *_Nonnull s
     }
 
     const uint16_t temp_plain_size = length - ONION_DATA_RESPONSE_MIN_SIZE;
-    VLA(uint8_t, temp_plain, temp_plain_size);
+    uint8_t temp_plain[MAX_UDP_PACKET_SIZE];
     int len = decrypt_data(onion_c->mem, packet + 1 + CRYPTO_NONCE_SIZE, onion_c->temp_secret_key, packet + 1,
                            packet + 1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE,
                            length - (1 + CRYPTO_NONCE_SIZE + CRYPTO_PUBLIC_KEY_SIZE), temp_plain);
@@ -1164,7 +1164,7 @@ static int handle_data_response(void *_Nonnull object, const IP_Port *_Nonnull s
     }
 
     const uint16_t plain_size = temp_plain_size - DATA_IN_RESPONSE_MIN_SIZE;
-    VLA(uint8_t, plain, plain_size);
+    uint8_t plain[MAX_UDP_PACKET_SIZE];
     len = decrypt_data(onion_c->mem, temp_plain, nc_get_self_secret_key(onion_c->c),
                        packet + 1, temp_plain + CRYPTO_PUBLIC_KEY_SIZE,
                        temp_plain_size - CRYPTO_PUBLIC_KEY_SIZE, plain);
@@ -1319,7 +1319,7 @@ int send_onion_data(Onion_Client *onion_c, int friend_num, const uint8_t *data, 
     random_nonce(onion_c->rng, nonce);
 
     const uint16_t packet_size = DATA_IN_RESPONSE_MIN_SIZE + length;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     memcpy(packet, nc_get_self_public_key(onion_c->c), CRYPTO_PUBLIC_KEY_SIZE);
     int len = encrypt_data(onion_c->mem, onion_c->friends_list[friend_num].real_public_key,
                            nc_get_self_secret_key(onion_c->c), nonce, data,
@@ -1376,7 +1376,7 @@ static int send_dht_dhtpk(const Onion_Client *_Nonnull onion_c, int friend_num, 
     random_nonce(onion_c->rng, nonce);
 
     const uint16_t temp_size = DATA_IN_RESPONSE_MIN_SIZE + CRYPTO_NONCE_SIZE + length;
-    VLA(uint8_t, temp, temp_size);
+    uint8_t temp[MAX_UDP_PACKET_SIZE];
     memcpy(temp, nc_get_self_public_key(onion_c->c), CRYPTO_PUBLIC_KEY_SIZE);
     memcpy(temp + CRYPTO_PUBLIC_KEY_SIZE, nonce, CRYPTO_NONCE_SIZE);
     int len = encrypt_data(onion_c->mem, onion_c->friends_list[friend_num].real_public_key,

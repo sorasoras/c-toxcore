@@ -49,7 +49,7 @@ bool send_forward_request(const Networking_Core *net, const IP_Port *forwarder,
     }
 
     const uint16_t len = forward_chain_packet_size(chain_length, data_length);
-    VLA(uint8_t, packet, len);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
 
     return create_forward_chain_packet(chain_keys, chain_length, data, data_length, packet)
            && sendpacket(net, forwarder, packet, len) == len;
@@ -128,7 +128,7 @@ bool send_forwarding(const Forwarding *forwarding, const IP_Port *dest,
     }
 
     const uint16_t len = forwarding_packet_length(sendback_data_len, length);
-    VLA(uint8_t, packet, len);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     create_forwarding_packet(forwarding, sendback_data, sendback_data_len, data, length, packet);
     return sendpacket(forwarding->net, dest, packet, len) == len;
 }
@@ -153,7 +153,7 @@ static bool handle_forward_request_dht(const Forwarding *_Nonnull forwarding,
     }
 
     const uint16_t len = forwarding_packet_length(sendback_data_len, forward_data_len);
-    VLA(uint8_t, forwarding_packet, len);
+    uint8_t forwarding_packet[MAX_UDP_PACKET_SIZE];
 
     create_forwarding_packet(forwarding, sendback_data, sendback_data_len, forward_data, forward_data_len,
                              forwarding_packet);
@@ -272,7 +272,7 @@ static int handle_forwarding(void *_Nonnull object, const IP_Port *_Nonnull sour
     const uint16_t forwarded_len = length - (1 + 1 + sendback_len);
 
     if (forwarded_len >= 1 && forwarded[0] == NET_PACKET_FORWARD_REQUEST) {
-        VLA(uint8_t, sendback_data, 1 + MAX_PACKED_IPPORT_SIZE + sendback_len);
+        uint8_t sendback_data[MAX_UDP_PACKET_SIZE];
         sendback_data[0] = SENDBACK_FORWARD;
 
         const int ipport_length = pack_ip_port(forwarding->log, sendback_data + 1, MAX_PACKED_IPPORT_SIZE, source);
@@ -317,7 +317,7 @@ bool forward_reply(const Networking_Core *net, const IP_Port *forwarder,
     }
 
     const uint16_t len = 1 + 1 + sendback_length + length;
-    VLA(uint8_t, packet, len);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     packet[0] = NET_PACKET_FORWARD_REPLY;
     packet[1] = (uint8_t) sendback_length;
     memcpy(packet + 1 + 1, sendback, sendback_length);

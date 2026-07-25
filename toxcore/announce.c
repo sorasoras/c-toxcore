@@ -421,7 +421,7 @@ static int create_reply_plain_store_announce_request(Announcements *_Nonnull ann
         return -1;
     }
 
-    VLA(uint8_t, plain, plain_len);
+    uint8_t plain[MAX_UDP_PACKET_SIZE];
 
     const uint8_t *shared_key = shared_key_cache_lookup(announce->shared_keys, data_public_key);
 
@@ -545,7 +545,7 @@ static int create_reply(Announcements *_Nonnull announce, const IP_Port *_Nonnul
         return -1;
     }
 
-    VLA(uint8_t, plain, plain_len);
+    uint8_t plain[MAX_UDP_PACKET_SIZE];
     const uint8_t *shared_key = dht_get_shared_key_recv(announce->dht, data + 1);
 
     if (decrypt_data_symmetric(announce->mem, shared_key,
@@ -563,7 +563,7 @@ static int create_reply(Announcements *_Nonnull announce, const IP_Port *_Nonnul
         return -1;
     }
 
-    VLA(uint8_t, plain_reply, plain_reply_max_len);
+    uint8_t plain_reply[MAX_UDP_PACKET_SIZE];
 
     const int plain_reply_noping_len = create_reply_plain(announce,
                                        data + 1, source, data[0],

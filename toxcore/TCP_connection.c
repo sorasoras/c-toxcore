@@ -506,7 +506,7 @@ int tcp_send_forward_request(const Logger *logger, TCP_Connections *tcp_c, const
     }
 
     const uint16_t len = forward_chain_packet_size(chain_length, data_length);
-    VLA(uint8_t, packet, len);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
 
     if (tcp_c->tcp_connections[index].connection == nullptr) {
         LOGGER_ERROR(tcp_c->logger, "TCP connection is null for connection index %d", index);

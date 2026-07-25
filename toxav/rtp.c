@@ -1005,7 +1005,7 @@ int rtp_send_data(const Logger *log, RTPSession *session, const uint8_t *data, u
     }
 
     const uint16_t rdata_size = min_u32(length + RTP_HEADER_SIZE + 1, MAX_CRYPTO_DATA_SIZE);
-    VLA(uint8_t, rdata, rdata_size);
+    uint8_t rdata[MAX_UDP_PACKET_SIZE];
     memset(rdata, 0, rdata_size);
     rdata[0] = session->payload_type;  // packet id == payload_type
 

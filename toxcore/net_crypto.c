@@ -1483,7 +1483,7 @@ static int send_data_packet(const Net_Crypto *_Nonnull c, int crypt_connection_i
     }
 
     const uint16_t packet_size = 1 + sizeof(uint16_t) + length + CRYPTO_MAC_SIZE;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     packet[0] = NET_PACKET_CRYPTO_DATA;
     memcpy(packet + 1, conn->send_nonce + (CRYPTO_NONCE_SIZE - sizeof(uint16_t)), sizeof(uint16_t));
 
@@ -1528,7 +1528,7 @@ static int send_data_packet_helper(const Net_Crypto *_Nonnull c, int crypt_conne
     random_bytes(c->rng, &rng_byte, 1);
     const uint16_t padding_length = rng_byte % (CRYPTO_MAX_PADDING + 1);
     const uint16_t packet_size = sizeof(uint32_t) + sizeof(uint32_t) + padding_length + length;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     memcpy(packet, &buffer_start, sizeof(uint32_t));
     memcpy(packet + sizeof(uint32_t), &num, sizeof(uint32_t));
     // Fill padding with random bytes

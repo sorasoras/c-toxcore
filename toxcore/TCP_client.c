@@ -405,7 +405,7 @@ int send_data(const Logger *logger, TCP_Client_Connection *con, uint8_t con_id, 
     }
 
     const uint16_t packet_size = 1 + length;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     packet[0] = con_id + NUM_RESERVED_PORTS;
     memcpy(packet + 1, data, length);
     return write_packet_tcp_secure_connection(logger, &con->con, packet, packet_size, false);
@@ -424,7 +424,7 @@ int send_oob_packet(const Logger *logger, TCP_Client_Connection *con, const uint
     }
 
     const uint16_t packet_size = 1 + CRYPTO_PUBLIC_KEY_SIZE + length;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     packet[0] = TCP_PACKET_OOB_SEND;
     memcpy(packet + 1, public_key, CRYPTO_PUBLIC_KEY_SIZE);
     memcpy(packet + 1 + CRYPTO_PUBLIC_KEY_SIZE, data, length);
@@ -552,7 +552,7 @@ int send_onion_request(const Logger *logger, TCP_Client_Connection *con, const u
     }
 
     const uint16_t packet_size = 1 + length;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     packet[0] = TCP_PACKET_ONION_REQUEST;
     memcpy(packet + 1, data, length);
     return write_packet_tcp_secure_connection(logger, &con->con, packet, packet_size, false);
@@ -574,7 +574,7 @@ int send_forward_request_tcp(const Logger *logger, TCP_Client_Connection *con, c
         return -1;
     }
 
-    VLA(uint8_t, packet, 1 + MAX_PACKED_IPPORT_SIZE + length);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     packet[0] = TCP_PACKET_FORWARD_REQUEST;
     const int ipport_length = pack_ip_port(logger, packet + 1, MAX_PACKED_IPPORT_SIZE, dest);
 

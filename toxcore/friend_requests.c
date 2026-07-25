@@ -167,7 +167,7 @@ static int friendreq_handlepacket(void *_Nonnull object, const uint8_t *_Nonnull
     addto_receivedlist(fr, source_pubkey);
 
     const uint16_t message_len = length - sizeof(fr->nospam);
-    VLA(uint8_t, message, message_len + 1);
+    uint8_t message[MAX_UDP_PACKET_SIZE];
     memcpy(message, data + sizeof(fr->nospam), message_len);
     message[message_len] = 0; /* Be sure the message is null terminated. TODO(iphydf): But why? */
 

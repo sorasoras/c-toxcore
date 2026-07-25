@@ -529,7 +529,7 @@ static int handle_tcp_oob_send(TCP_Server *_Nonnull tcp_server, uint32_t con_id,
 
     if (other_index != -1) {
         const uint16_t resp_packet_size = 1 + CRYPTO_PUBLIC_KEY_SIZE + length;
-        VLA(uint8_t, resp_packet, resp_packet_size);
+        uint8_t resp_packet[MAX_UDP_PACKET_SIZE];
         resp_packet[0] = TCP_PACKET_OOB_RECV;
         memcpy(resp_packet + 1, con->public_key, CRYPTO_PUBLIC_KEY_SIZE);
         memcpy(resp_packet + 1 + CRYPTO_PUBLIC_KEY_SIZE, data, length);
@@ -616,7 +616,7 @@ static int handle_onion_recv_1(void *_Nonnull object, const IP_Port *_Nonnull de
     TCP_Secure_Connection *con = &tcp_server->accepted_connection_array[index];
 
     const uint16_t packet_size = 1 + length;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     memcpy(packet + 1, data, length);
     packet[0] = TCP_PACKET_ONION_RESPONSE;
 
@@ -655,7 +655,7 @@ static bool handle_forward_reply_tcp(void *_Nonnull object, const uint8_t *_Nonn
     }
 
     const uint16_t packet_size = 1 + length;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     memcpy(packet + 1, data, length);
     packet[0] = TCP_PACKET_FORWARDING;
 
@@ -826,7 +826,7 @@ static int handle_tcp_packet(TCP_Server *_Nonnull tcp_server, uint32_t con_id, c
 
             const uint32_t index = con->connections[c_id].index;
             const uint8_t other_c_id = con->connections[c_id].other_id + NUM_RESERVED_PORTS;
-            VLA(uint8_t, new_data, length);
+            uint8_t new_data[MAX_UDP_PACKET_SIZE];
             memcpy(new_data, data, length);
             new_data[0] = other_c_id;
             const int ret = write_packet_tcp_secure_connection(tcp_server->logger,

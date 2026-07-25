@@ -869,7 +869,7 @@ int send_friend_request_packet(Friend_Connections *fr_c, int friendcon_id, uint3
     }
 
     const uint16_t packet_size = 1 + sizeof(nospam_num) + length;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     net_pack_u32(packet + 1, nospam_num);
     memcpy(packet + 1 + sizeof(nospam_num), data, length);
 

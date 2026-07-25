@@ -129,7 +129,7 @@ static int msi_send_packet(void *_Nonnull user_data, uint32_t friend_number, con
 {
     Tox *tox = (Tox *)user_data;
     const size_t length_new = length + 1;
-    VLA(uint8_t, data_new, length_new);
+    uint8_t data_new[MAX_UDP_PACKET_SIZE];
     data_new[0] = PACKET_ID_MSI;
     memcpy(data_new + 1, data, length);
 
@@ -1085,7 +1085,7 @@ bool toxav_audio_send_frame(ToxAV *_Nonnull av, Tox_Friend_Number friend_number,
 
         /* This is more than enough always */
         const uint16_t dest_size = sample_count + sizeof(sampling_rate);
-        VLA(uint8_t, dest, dest_size);
+        uint8_t dest[MAX_UDP_PACKET_SIZE];
 
         sampling_rate = net_htonl(sampling_rate);
         memcpy(dest, &sampling_rate, sizeof(sampling_rate));

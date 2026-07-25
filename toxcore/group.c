@@ -1609,7 +1609,7 @@ static bool send_packet_group_peer(const Friend_Connections *_Nonnull fr_c, int 
 
     group_num = net_htons(group_num);
     const uint32_t packet_size = 1 + sizeof(uint16_t) + length;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     packet[0] = packet_id;
     memcpy(packet + 1, &group_num, sizeof(uint16_t));
     memcpy(packet + 1 + sizeof(uint16_t), data, length);
@@ -1630,7 +1630,7 @@ static bool send_lossy_group_peer(const Friend_Connections *_Nonnull fr_c, int f
 
     group_num = net_htons(group_num);
     const uint32_t packet_size = 1 + sizeof(uint16_t) + length;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     packet[0] = packet_id;
     memcpy(packet + 1, &group_num, sizeof(uint16_t));
     memcpy(packet + 1 + sizeof(uint16_t), data, length);
@@ -1766,7 +1766,7 @@ static bool send_invite_response(Group_Chats *g_c, int groupnumber, uint32_t fri
     const bool member = g->status == GROUPCHAT_STATUS_CONNECTED;
 
     const uint32_t response_size = member ? INVITE_MEMBER_PACKET_SIZE : INVITE_ACCEPT_PACKET_SIZE;
-    VLA(uint8_t, response, response_size);
+    uint8_t response[INVITE_MEMBER_PACKET_SIZE];
     response[0] = member ? INVITE_MEMBER_ID : INVITE_ACCEPT_ID;
     net_pack_u16(response + 1, groupnumber);
     memcpy(response + 1 + sizeof(uint16_t), data, length);
@@ -2422,7 +2422,7 @@ static unsigned int send_peers(const Group_Chats *_Nonnull g_c, const Group_c *_
 
     if (g->title_len > 0) {
         const uint32_t title_packet_size = 1 + g->title_len;
-        VLA(uint8_t, title_packet, title_packet_size);
+        uint8_t title_packet[MAX_UDP_PACKET_SIZE];
         title_packet[0] = PEER_TITLE_ID;
         memcpy(title_packet + 1, g->title, g->title_len);
         send_packet_group_peer(g_c->fr_c, friendcon_id, PACKET_ID_DIRECT_CONFERENCE, group_num,
@@ -2654,7 +2654,7 @@ static int send_message_group(const Group_Chats *g_c, uint32_t groupnumber, uint
     }
 
     const uint16_t packet_size = sizeof(uint16_t) + sizeof(uint32_t) + 1 + len;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     const uint16_t peer_num = net_htons(g->peer_number);
     memcpy(packet, &peer_num, sizeof(peer_num));
 
@@ -2727,7 +2727,7 @@ int send_group_lossy_packet(const Group_Chats *g_c, uint32_t groupnumber, const 
     }
 
     const uint16_t packet_size = sizeof(uint16_t) * 2 + length;
-    VLA(uint8_t, packet, packet_size);
+    uint8_t packet[MAX_UDP_PACKET_SIZE];
     const uint16_t peer_number = net_htons(g->peer_number);
     memcpy(packet, &peer_number, sizeof(uint16_t));
     const uint16_t message_num = net_htons(g->lossy_message_number);
@@ -2930,7 +2930,7 @@ static void handle_message_packet_group(Group_Chats *_Nonnull g_c, uint32_t grou
                 return;
             }
 
-            VLA(uint8_t, newmsg, msg_data_len + 1);
+            uint8_t newmsg[MAX_UDP_PACKET_SIZE];
             memcpy(newmsg, msg_data, msg_data_len);
             newmsg[msg_data_len] = 0;
 
@@ -2947,7 +2947,7 @@ static void handle_message_packet_group(Group_Chats *_Nonnull g_c, uint32_t grou
                 return;
             }
 
-            VLA(uint8_t, newmsg, msg_data_len + 1);
+            uint8_t newmsg[MAX_UDP_PACKET_SIZE];
             memcpy(newmsg, msg_data, msg_data_len);
             newmsg[msg_data_len] = 0;
 

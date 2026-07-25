@@ -834,7 +834,7 @@ static int handle_data_search_response(void *_Nonnull object, const IP_Port *_No
         return 1;
     }
 
-    VLA(uint8_t, plain, plain_len);
+    uint8_t plain[MAX_UDP_PACKET_SIZE];
     const uint8_t *public_key = packet + 1;
     const uint8_t *shared_key = dht_get_shared_key_recv(dht, public_key);
 
@@ -1383,7 +1383,7 @@ static int send_nodes_response(const DHT *_Nonnull dht, const IP_Port *_Nonnull 
     const uint32_t num_nodes =
         get_close_nodes(dht, client_id, nodes_list, net_family_unspec(), ip_is_lan(&ip_port->ip), false);
 
-    VLA(uint8_t, plain, 1 + node_format_size * MAX_SENT_NODES + length);
+    uint8_t plain[MAX_UDP_PACKET_SIZE];
 
     int nodes_length = 0;
 
@@ -1400,7 +1400,7 @@ static int send_nodes_response(const DHT *_Nonnull dht, const IP_Port *_Nonnull 
 
     const uint16_t crypto_size = 1 + CRYPTO_PUBLIC_KEY_SIZE + CRYPTO_NONCE_SIZE + CRYPTO_MAC_SIZE;
     const uint16_t data_size = 1 + nodes_length + length + crypto_size;
-    VLA(uint8_t, data, data_size);
+    uint8_t data[MAX_UDP_PACKET_SIZE];
 
     const int len = dht_create_packet(dht->mem, dht->rng,
                                       dht->self_public_key, shared_encryption_key, NET_PACKET_NODES_RESPONSE,
@@ -1488,7 +1488,7 @@ static bool handle_nodes_response_core(void *_Nonnull object, const IP_Port *_No
     }
 
     const uint32_t plain_size = 1 + data_size + sizeof(uint64_t);
-    VLA(uint8_t, plain, plain_size);
+    uint8_t plain[MAX_UDP_PACKET_SIZE];
     const uint8_t *shared_key = dht_get_shared_key_sent(dht, packet + 1);
     const int len = decrypt_data_symmetric(
                         dht->mem,
