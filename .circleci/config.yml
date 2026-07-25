@@ -77,6 +77,7 @@ jobs:
           ca-certificates
           clang
           cmake
+          curl
           git
           libbenchmark-dev
           libconfig-dev
@@ -87,11 +88,17 @@ jobs:
           libvpx-dev
           llvm-dev
           ninja-build
-          pkg-config
-      - run: apt-get install -y --no-install-recommends
-          ca-certificates
-          g++
-          llvm-dev
+          nlohmann-json3-dev
+          pkg-config &&
+          curl -L -o ftxui.deb https://github.com/ArthurSonzogni/FTXUI/releases/download/v6.1.9/ftxui-6.1.9-Linux.deb &&
+          apt-get install -y ./ftxui.deb &&
+          rm ftxui.deb
+      - run:
+          apt-get install -y --no-install-recommends
+            ca-certificates
+            g++
+            llvm-dev
+>>>>>>> iphydf/netprof-ui
       - checkout
       - run: git submodule update --init --recursive
       - run: other/analysis/check_includes
