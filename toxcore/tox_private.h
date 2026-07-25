@@ -88,6 +88,19 @@ void tox_iterate_options_set_fail_hard(Tox_Iterate_Options *_Nonnull options, bo
 bool tox_iterate_options_get_fail_hard(const Tox_Iterate_Options *_Nullable options);
 
 /**
+ * Set the maximum number of events to process per iterate call.
+ *
+ * 0 = unlimited (default). When the limit is reached, further events
+ * are silently dropped and TOX_ERR_EVENTS_ITERATE_LIMIT_REACHED is set.
+ */
+void tox_iterate_options_set_max_events_per_iterate(Tox_Iterate_Options *_Nonnull options, uint32_t max_events);
+
+/**
+ * Get the maximum number of events to process per iterate call.
+ */
+uint32_t tox_iterate_options_get_max_events_per_iterate(const Tox_Iterate_Options *_Nullable options);
+
+/**
  * Run a single tox_iterate iteration with custom options.
  */
 void tox_iterate_with_options(
@@ -98,7 +111,7 @@ void tox_iterate_with_options(
 void tox_lock(const Tox *_Nonnull tox);
 void tox_unlock(const Tox *_Nonnull tox);
 
-Tox_Events *_Nullable tox_iterate_internal(Tox *_Nonnull tox, Tox_Err_Events_Iterate *_Nullable error);
+Tox_Events *_Nullable tox_iterate_internal(Tox *_Nonnull tox, uint32_t max_events_per_iterate, Tox_Err_Events_Iterate *_Nullable error);
 
 /**
  * Set the callback for the `friend_lossy_packet` event for a specific packet

@@ -94,7 +94,8 @@ const Tox_Event *tox_events_get(const Tox_Events *events, uint32_t index)
 Tox_Events *tox_events_iterate(Tox *tox, const Tox_Iterate_Options *options, Tox_Err_Events_Iterate *error)
 {
     tox_lock(tox);
-    Tox_Events *events = tox_iterate_internal(tox, error);
+    Tox_Events *events = tox_iterate_internal(tox,
+        tox_iterate_options_get_max_events_per_iterate(options), error);
 
     if (events != nullptr) {
         tox_events_dispatch(tox, events, nullptr);

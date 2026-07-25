@@ -552,6 +552,14 @@ typedef enum Tox_Err_Events_Iterate {
      * the function may have missed some events.
      */
     TOX_ERR_EVENTS_ITERATE_MALLOC,
+
+    /**
+     * The limit on the number of events per iterate was reached.
+     * Some events may have been dropped. Increase
+     * Tox_Iterate_Options.max_events_per_iterate or call
+     * tox_iterate more frequently.
+     */
+    TOX_ERR_EVENTS_ITERATE_LIMIT_REACHED,
 } Tox_Err_Events_Iterate;
 
 /**

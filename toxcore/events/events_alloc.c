@@ -35,6 +35,7 @@ Tox_Events_State *tox_events_alloc(Tox_Events_State *state)
     };
     state->events = events;
     state->events->mem = state->mem;
+    state->events->max_events_per_iterate = state->max_events_per_iterate;
 
     return state;
 }
@@ -55,6 +56,12 @@ void tox_events_free(Tox_Events *events)
 
 bool tox_events_add(Tox_Events *events, const Tox_Event *event)
 {
+    // Enforce per-iterate event limit (0 = unlimited)
+    if (events->max_events_per_iterate > 0
+            && events->events_size >= events->max_events_per_iterate) {
+        return false;
+    }
+
     if (events->events_size == UINT32_MAX) {
         return false;
     }

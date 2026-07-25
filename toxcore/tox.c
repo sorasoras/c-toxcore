@@ -1074,11 +1074,11 @@ uint32_t tox_iteration_interval(const Tox *_Nonnull tox)
     return ret;
 }
 
-Tox_Events *tox_iterate_internal(Tox *tox, Tox_Err_Events_Iterate *error)
+Tox_Events *tox_iterate_internal(Tox *tox, uint32_t max_events_per_iterate, Tox_Err_Events_Iterate *error)
 {
     mono_time_update(tox->mono_time);
 
-    Tox_Events_State state = {TOX_ERR_EVENTS_ITERATE_OK, tox->sys.mem, nullptr};
+    Tox_Events_State state = {TOX_ERR_EVENTS_ITERATE_OK, tox->sys.mem, nullptr, max_events_per_iterate};
     struct Tox_Userdata tox_data = {tox, &state};
     do_messenger(tox->m, &tox_data);
     do_groupchats(tox->m->conferences_object, &tox_data);
@@ -1095,7 +1095,8 @@ void tox_iterate_with_options(Tox *tox, const Tox_Iterate_Options *options, void
     assert(tox != nullptr);
     tox_lock(tox);
 
-    Tox_Events *events = tox_iterate_internal(tox, nullptr);
+    Tox_Events *events = tox_iterate_internal(tox,
+        tox_iterate_options_get_max_events_per_iterate(options), nullptr);
 
     if (events != nullptr) {
         tox_events_dispatch(tox, events, user_data);
@@ -4705,6 +4706,7 @@ const Tox_System *tox_get_system(const Tox *tox)
 
 struct Tox_Iterate_Options {
     bool fail_hard;
+    uint32_t max_events_per_iterate;  // 0 = unlimited
 };
 
 Tox_Iterate_Options *tox_iterate_options_new(Tox_Err_Iterate_Options_New *error)
@@ -4714,6 +4716,7 @@ Tox_Iterate_Options *tox_iterate_options_new(Tox_Err_Iterate_Options_New *error)
 
     if (options != nullptr) {
         options->fail_hard = false;
+        options->max_events_per_iterate = 0;  // unlimited by default
 
         SET_ERROR_PARAMETER(error, TOX_ERR_ITERATE_OPTIONS_NEW_OK);
 
@@ -4740,6 +4743,18 @@ void tox_iterate_options_set_fail_hard(Tox_Iterate_Options *options, bool fail_h
 bool tox_iterate_options_get_fail_hard(const Tox_Iterate_Options *options)
 {
     return options == nullptr ? false : options->fail_hard;
+}
+
+void tox_iterate_options_set_max_events_per_iterate(Tox_Iterate_Options *options, uint32_t max_events)
+{
+    if (options != nullptr) {
+        options->max_events_per_iterate = max_events;
+    }
+}
+
+uint32_t tox_iterate_options_get_max_events_per_iterate(const Tox_Iterate_Options *options)
+{
+    return options == nullptr ? 0 : options->max_events_per_iterate;
 }
 
 /* --- Multi-Device API --- */

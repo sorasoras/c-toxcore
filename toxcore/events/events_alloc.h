@@ -23,6 +23,7 @@ struct Tox_Events {
     Tox_Event *_Nullable events;
     uint32_t events_size;
     uint32_t events_capacity;
+    uint32_t max_events_per_iterate;   // 0 = unlimited
 
     const struct Memory *_Nonnull mem;
 };
@@ -31,6 +32,7 @@ typedef struct Tox_Events_State {
     Tox_Err_Events_Iterate error;
     const struct Memory *_Nonnull mem;
     Tox_Events *_Nullable events;
+    uint32_t max_events_per_iterate;   // 0 = unlimited
 } Tox_Events_State;
 
 Tox_Events_State *_Nonnull tox_events_alloc(Tox_Events_State *_Nonnull state);
