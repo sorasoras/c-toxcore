@@ -122,7 +122,7 @@ static void test_gca_announce_response_size(void)
 
     IP ip = get_loopback();
 
-    Networking_Core *srv_net = new_networking_ex(
+    Networking_Core *srv_net = new_networking(
                                    srv_log, mem, ns, &ip, 36700,
                                    36700 + (TOX_PORTRANGE_TO - TOX_PORTRANGE_FROM), nullptr);
     ck_assert(srv_net != nullptr);
@@ -180,7 +180,7 @@ static void test_gca_announce_response_size(void)
     Mono_Time *cli_mono = mono_time_new(mem, nullptr, nullptr);
     ck_assert(cli_mono != nullptr);
 
-    Networking_Core *cli_net = new_networking_ex(
+    Networking_Core *cli_net = new_networking(
                                    cli_log, mem, ns, &ip, 36701,
                                    36701 + (TOX_PORTRANGE_TO - TOX_PORTRANGE_FROM), nullptr);
     ck_assert(cli_net != nullptr);

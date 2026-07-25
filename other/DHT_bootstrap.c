@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
     Mono_Time *mono_time = mono_time_new(mem, nullptr, nullptr);
     const uint16_t start_port = PORT;
     const uint16_t end_port = start_port + (TOX_PORTRANGE_TO - TOX_PORTRANGE_FROM);
-    Networking_Core *net = new_networking_ex(logger, mem, ns, &ip, start_port, end_port, nullptr);
+    Networking_Core *net = new_networking(logger, mem, ns, &ip, start_port, end_port, nullptr);
     DHT *dht = new_dht(logger, mem, rng, ns, mono_time, net, true, true);
     Onion *onion = new_onion(logger, mem, mono_time, rng, dht, net);
     Forwarding *forwarding = new_forwarding(logger, mem, rng, mono_time, dht, net);

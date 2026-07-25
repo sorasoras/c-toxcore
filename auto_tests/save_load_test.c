@@ -305,10 +305,207 @@ static void test_few_clients(void)
     tox_options_free(opts3);
 }
 
+static void friend_message_received(const Tox_Event_Friend_Message *event, void *user_data)
+{
+    bool *got_message = (bool *)user_data;
+    *got_message = true;
+}
+
+/** Test that messages can be exchanged after save/load cycle */
+static void test_save_load_messaging(void)
+{
+    printf("=== Test: save/load preserves ability to exchange messages ===\n");
+
+    Tox_Options *opts1 = tox_options_new(nullptr);
+    ck_assert(opts1 != nullptr);
+    tox_options_set_local_discovery_enabled(opts1, false);
+    tox_options_set_start_port(opts1, 33501);
+    tox_options_set_end_port(opts1, 33501);
+
+    Tox_Options *opts2 = tox_options_new(nullptr);
+    ck_assert(opts2 != nullptr);
+    tox_options_set_local_discovery_enabled(opts2, false);
+    tox_options_set_start_port(opts2, 33551);
+    tox_options_set_end_port(opts2, 33551);
+
+    Tox_Err_New err1, err2;
+    Tox *tox1 = tox_new(opts1, &err1);
+    ck_assert(err1 == TOX_ERR_NEW_OK);
+    Tox *tox2 = tox_new(opts2, &err2);
+    ck_assert(err2 == TOX_ERR_NEW_OK);
+
+    Tox_Dispatch *dispatch1 = tox_dispatch_new(nullptr);
+    ck_assert(dispatch1 != nullptr);
+    Tox_Dispatch *dispatch2 = tox_dispatch_new(nullptr);
+    ck_assert(dispatch2 != nullptr);
+
+    tox_events_callback_friend_request(dispatch1, accept_friend_request);
+    tox_events_callback_friend_request(dispatch2, accept_friend_request);
+
+    // Bootstrap
+    uint8_t dht_key[TOX_PUBLIC_KEY_SIZE];
+    tox_self_get_dht_id(tox2, dht_key);
+    uint16_t port2 = tox_self_get_udp_port(tox2, nullptr);
+    tox_bootstrap(tox1, TOX_LOCALHOST, port2, dht_key, nullptr);
+
+    // Add friend
+    Tox_Err_Friend_Add friend_err;
+    tox_friend_add(tox1, tox_self_get_address(tox2), (const uint8_t *)"test", 4, &friend_err);
+    ck_assert(friend_err == TOX_ERR_FRIEND_ADD_OK);
+
+    // Wait for connection
+    time_t start_time = time(nullptr);
+    while (!tox_self_get_connection_status(tox1) || !tox_self_get_connection_status(tox2)) {
+        {
+            Tox_Err_Events_Iterate err = TOX_ERR_EVENTS_ITERATE_OK;
+            Tox_Events *events = tox_events_iterate(tox1, true, &err);
+            tox_dispatch_invoke(dispatch1, events, tox1);
+            tox_events_free(events);
+        }
+        {
+            Tox_Err_Events_Iterate err = TOX_ERR_EVENTS_ITERATE_OK;
+            Tox_Events *events = tox_events_iterate(tox2, true, &err);
+            tox_dispatch_invoke(dispatch2, events, tox2);
+            tox_events_free(events);
+        }
+        c_sleep(50);
+        ck_assert_msg(time(nullptr) - start_time < 60, "timeout waiting for connection");
+    }
+
+    printf("  Connected. Sending message before save...\n");
+
+    // Register message callback on tox2
+    bool got_message_before_save = false;
+    tox_events_callback_friend_message(dispatch2, friend_message_received);
+
+    // Send a message from tox1 to tox2
+    Tox_Err_Friend_Send_Message send_err;
+    tox_friend_send_message(tox1, 0, TOX_MESSAGE_TYPE_NORMAL,
+        (const uint8_t *)"Hello before save", 18, &send_err);
+    ck_assert(send_err == TOX_ERR_FRIEND_SEND_MESSAGE_OK);
+
+    // Wait for delivery
+    start_time = time(nullptr);
+    while (!got_message_before_save) {
+        Tox_Err_Events_Iterate err = TOX_ERR_EVENTS_ITERATE_OK;
+        Tox_Events *events = tox_events_iterate(tox2, true, &err);
+        tox_dispatch_invoke(dispatch2, events, tox2);
+        tox_events_free(events);
+        c_sleep(50);
+        ck_assert_msg(time(nullptr) - start_time < 10, "timeout waiting for message before save");
+    }
+
+    printf("  Message delivered before save. Saving both instances...\n");
+
+    // Save both instances
+    size_t save_size1 = tox_get_savedata_size(tox1);
+    size_t save_size2 = tox_get_savedata_size(tox2);
+    VLA(uint8_t, save_data1, save_size1);
+    VLA(uint8_t, save_data2, save_size2);
+    tox_get_savedata(tox1, save_data1);
+    tox_get_savedata(tox2, save_data2);
+
+    // Kill old instances
+    tox_kill(tox1);
+    tox_kill(tox2);
+    tox_dispatch_free(dispatch1);
+    tox_dispatch_free(dispatch2);
+
+    printf("  Old instances killed. Reloading from save data...\n");
+
+    // Reload from save data
+    Tox_Options *reload_opts1 = tox_options_new(nullptr);
+    ck_assert(reload_opts1 != nullptr);
+    tox_options_set_savedata_data(reload_opts1, save_data1, save_size1);
+    tox_options_set_local_discovery_enabled(reload_opts1, false);
+    tox_options_set_start_port(reload_opts1, 33502);
+    tox_options_set_end_port(reload_opts1, 33502);
+
+    Tox_Options *reload_opts2 = tox_options_new(nullptr);
+    ck_assert(reload_opts2 != nullptr);
+    tox_options_set_savedata_data(reload_opts2, save_data2, save_size2);
+    tox_options_set_local_discovery_enabled(reload_opts2, false);
+    tox_options_set_start_port(reload_opts2, 33552);
+    tox_options_set_end_port(reload_opts2, 33552);
+
+    Tox *retox1 = tox_new(reload_opts1, &err1);
+    ck_assert(err1 == TOX_ERR_NEW_OK);
+    Tox *retox2 = tox_new(reload_opts2, &err2);
+    ck_assert(err2 == TOX_ERR_NEW_OK);
+
+    Tox_Dispatch *redispatch1 = tox_dispatch_new(nullptr);
+    Tox_Dispatch *redispatch2 = tox_dispatch_new(nullptr);
+    ck_assert(redispatch1 != nullptr && redispatch2 != nullptr);
+
+    tox_events_callback_friend_request(redispatch1, accept_friend_request);
+    tox_events_callback_friend_request(redispatch2, accept_friend_request);
+
+    // Re-bootstrap
+    tox_self_get_dht_id(retox2, dht_key);
+    port2 = tox_self_get_udp_port(retox2, nullptr);
+    tox_bootstrap(retox1, TOX_LOCALHOST, port2, dht_key, nullptr);
+
+    // Wait for reconnection
+    start_time = time(nullptr);
+    while (!tox_self_get_connection_status(retox1) || !tox_self_get_connection_status(retox2)) {
+        {
+            Tox_Err_Events_Iterate err = TOX_ERR_EVENTS_ITERATE_OK;
+            Tox_Events *events = tox_events_iterate(retox1, true, &err);
+            tox_dispatch_invoke(redispatch1, events, retox1);
+            tox_events_free(events);
+        }
+        {
+            Tox_Err_Events_Iterate err = TOX_ERR_EVENTS_ITERATE_OK;
+            Tox_Events *events = tox_events_iterate(retox2, true, &err);
+            tox_dispatch_invoke(redispatch2, events, retox2);
+            tox_events_free(events);
+        }
+        c_sleep(50);
+        ck_assert_msg(time(nullptr) - start_time < 60, "timeout waiting for reconnection after reload");
+    }
+
+    printf("  Reconnected after reload. Sending message...\n");
+
+    // Verify friend relationship survived reload
+    ck_assert(tox_friend_get_connection_status(retox1, 0, nullptr) != TOX_CONNECTION_NONE);
+
+    // Send a new message after reload
+    bool got_message_after_reload = false;
+    tox_events_callback_friend_message(redispatch2, friend_message_received);
+
+    tox_friend_send_message(retox1, 0, TOX_MESSAGE_TYPE_NORMAL,
+        (const uint8_t *)"Hello after reload", 19, &send_err);
+    ck_assert(send_err == TOX_ERR_FRIEND_SEND_MESSAGE_OK);
+
+    // Wait for delivery after reload
+    start_time = time(nullptr);
+    while (!got_message_after_reload) {
+        Tox_Err_Events_Iterate err = TOX_ERR_EVENTS_ITERATE_OK;
+        Tox_Events *events = tox_events_iterate(retox2, true, &err);
+        tox_dispatch_invoke(redispatch2, events, retox2);
+        tox_events_free(events);
+        c_sleep(50);
+        ck_assert_msg(time(nullptr) - start_time < 10, "timeout waiting for message after reload");
+    }
+
+    printf("  Message delivered after reload! Test passed.\n");
+
+    // Cleanup
+    tox_kill(retox1);
+    tox_kill(retox2);
+    tox_dispatch_free(redispatch1);
+    tox_dispatch_free(redispatch2);
+    tox_options_free(reload_opts1);
+    tox_options_free(reload_opts2);
+    tox_options_free(opts1);
+    tox_options_free(opts2);
+}
+
 int main(void)
 {
     setvbuf(stdout, nullptr, _IONBF, 0);
 
     test_few_clients();
+    test_save_load_messaging();
     return 0;
 }

@@ -66,7 +66,7 @@ WrappedMockDHT::WrappedMockDHT(tox::test::SimulatedEnvironment &env, std::uint16
     IP ip;
     ip_init(&ip, false);
     unsigned int error = 0;
-    networking_.reset(new_networking_ex(
+    networking_.reset(new_networking(
         logger_.get(), &node_->c_memory, &node_->c_network, &ip, port, port + 1, &error));
     assert(error == 0);
 
@@ -112,7 +112,7 @@ WrappedDHT::WrappedDHT(tox::test::SimulatedEnvironment &env, std::uint16_t port)
     IP ip;
     ip_init(&ip, false);
     unsigned int error = 0;
-    networking_.reset(new_networking_ex(
+    networking_.reset(new_networking(
         logger_.get(), &node_->c_memory, &node_->c_network, &ip, port, port + 1, &error));
     assert(error == 0);
 

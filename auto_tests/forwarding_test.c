@@ -123,7 +123,7 @@ static Forwarding_Subtox *new_forwarding_subtox(const Memory *mem, bool no_udp, 
         subtox->net = new_networking_no_udp(subtox->log, mem, ns);
     } else {
         const IP ip = get_loopback();
-        subtox->net = new_networking_ex(subtox->log, mem, ns, &ip, port, port, nullptr);
+        subtox->net = new_networking(subtox->log, mem, ns, &ip, port, port, nullptr);
     }
 
     subtox->dht = new_dht(subtox->log, mem, rng, ns, subtox->mono_time, subtox->net, true, true);

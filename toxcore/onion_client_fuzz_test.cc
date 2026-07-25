@@ -51,7 +51,7 @@ public:
         IP ip;
         ip_init(&ip, true);
         unsigned int error = 0;
-        networking_.reset(new_networking_ex(
+        networking_.reset(new_networking(
             logger_.get(), &node_->c_memory, &node_->c_network, &ip, port, port + 1, &error));
         // In fuzzing we might ignore assert, but setup should succeed
         node_->endpoint = node_->node->get_primary_socket();

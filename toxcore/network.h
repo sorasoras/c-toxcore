@@ -404,7 +404,7 @@ bool bind_to_port(const Network *_Nonnull ns, Socket sock, Family family, uint16
  *
  * If error is non NULL it is set to 0 if no issues, 1 if socket related error, 2 if other.
  */
-Networking_Core *_Nullable new_networking_ex(
+Networking_Core *_Nullable new_networking(
     const Logger *_Nonnull log, const Memory *_Nonnull mem, const Network *_Nonnull ns, const IP *_Nonnull ip,
     uint16_t port_from, uint16_t port_to, unsigned int *_Nullable error);
 Networking_Core *_Nullable new_networking_no_udp(const Logger *_Nonnull log, const Memory *_Nonnull mem, const Network *_Nonnull ns);

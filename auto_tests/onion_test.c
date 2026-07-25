@@ -217,7 +217,7 @@ static void send_onion_packet(const Networking_Core *net, const Memory *mem, con
  */
 static Networking_Core *new_networking(const Logger *log, const Memory *mem, const Network *ns, const IP *ip, uint16_t port)
 {
-    return new_networking_ex(log, mem, ns, ip, port, port + (TOX_PORTRANGE_TO - TOX_PORTRANGE_FROM), nullptr);
+    return new_networking(log, mem, ns, ip, port, port + (TOX_PORTRANGE_TO - TOX_PORTRANGE_FROM), nullptr);
 }
 
 static void test_basic(void)

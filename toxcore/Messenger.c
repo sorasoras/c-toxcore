@@ -3445,7 +3445,7 @@ Messenger *new_messenger(Mono_Time *mono_time, const Memory *mem, const Random *
     } else {
         IP ip;
         ip_init(&ip, options->ipv6enabled);
-        net = new_networking_ex(m->log, m->mem, m->ns, &ip, options->port_range[0], options->port_range[1], &net_err);
+        net = new_networking(m->log, m->mem, m->ns, &ip, options->port_range[0], options->port_range[1], &net_err);
     }
 
     if (net == nullptr) {

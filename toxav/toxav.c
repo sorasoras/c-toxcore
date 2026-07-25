@@ -175,7 +175,7 @@ static void rtp_add_lost(void *_Nullable user_data, uint32_t bytes)
     bwc_add_lost(bwc, bytes);
 }
 
-static void handle_rtp_packet(Tox *_Nonnull tox, Tox_Friend_Number friend_number, const uint8_t *_Nonnull data, size_t length, void *_Nullable user_data)
+static void on_rtp_lossy_packet(Tox *_Nonnull tox, Tox_Friend_Number friend_number, const uint8_t *_Nonnull data, size_t length, void *_Nullable user_data)
 {
     ToxAV *toxav = (ToxAV *)tox_get_av_object(tox);
 
@@ -362,8 +362,8 @@ ToxAV *_Nullable toxav_new(Tox *_Nonnull tox, Toxav_Err_New *_Nullable error)
 
     av->msi = msi_new(av->log, msi_send_packet, av->tox, &callbacks, av);
 
-    tox_callback_friend_lossy_packet_per_pktid(av->tox, handle_rtp_packet, RTP_TYPE_AUDIO);
-    tox_callback_friend_lossy_packet_per_pktid(av->tox, handle_rtp_packet, RTP_TYPE_VIDEO);
+    tox_callback_friend_lossy_packet_per_pktid(av->tox, on_rtp_lossy_packet, RTP_TYPE_AUDIO);
+    tox_callback_friend_lossy_packet_per_pktid(av->tox, on_rtp_lossy_packet, RTP_TYPE_VIDEO);
     tox_callback_friend_lossy_packet_per_pktid(av->tox, handle_bwc_packet, BWC_PACKET_ID);
     tox_callback_friend_lossless_packet_per_pktid(av->tox, handle_msi_packet, PACKET_ID_MSI);
 

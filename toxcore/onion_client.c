@@ -2163,7 +2163,7 @@ void do_onion_client(Onion_Client *onion_c)
         }
     }
 
-    onion_c->udp_connected = dht_non_lan_connected(onion_c->dht);
+    onion_c->udp_connected = dht_isconnected(onion_c->dht);
 
     if (mono_time_is_timeout(onion_c->mono_time, onion_c->first_run, ONION_CONNECTION_SECONDS * 2)) {
         set_tcp_onion_status(nc_get_tcp_c(onion_c->c), !onion_c->udp_connected);

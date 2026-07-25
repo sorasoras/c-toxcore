@@ -299,14 +299,14 @@ int main(int argc, char *argv[])
     logger_callback_log(logger, toxcore_logger_callback, nullptr, nullptr);
 
     const uint16_t end_port = start_port + (TOX_PORTRANGE_TO - TOX_PORTRANGE_FROM);
-    Networking_Core *net = new_networking_ex(logger, mem, ns, &ip, start_port, end_port, nullptr);
+    Networking_Core *net = new_networking(logger, mem, ns, &ip, start_port, end_port, nullptr);
 
     if (net == nullptr) {
         if (enable_ipv6 && enable_ipv4_fallback) {
             LOG_WRITE(LOG_LEVEL_WARNING, "Couldn't initialize IPv6 networking. Falling back to using IPv4.\n");
             enable_ipv6 = false;
             ip_init(&ip, enable_ipv6);
-            net = new_networking_ex(logger, mem, ns, &ip, start_port, end_port, nullptr);
+            net = new_networking(logger, mem, ns, &ip, start_port, end_port, nullptr);
 
             if (net == nullptr) {
                 LOG_WRITE(LOG_LEVEL_ERROR, "Couldn't fallback to IPv4. Exiting.\n");

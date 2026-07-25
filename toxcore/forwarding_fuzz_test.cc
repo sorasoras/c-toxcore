@@ -66,7 +66,7 @@ void TestSendForwardRequest(Fuzz_Data &input)
     }
 
     const Ptr<Networking_Core> net(
-        new_networking_ex(logger.get(), &node->c_memory, &node->c_network, &ipp.ip, ipp.port,
+        new_networking(logger.get(), &node->c_memory, &node->c_network, &ipp.ip, ipp.port,
             ipp.port + 100, nullptr),
         kill_networking);
     if (net == nullptr) {
@@ -97,7 +97,7 @@ void TestForwardReply(Fuzz_Data &input)
     }
 
     const Ptr<Networking_Core> net(
-        new_networking_ex(logger.get(), &node->c_memory, &node->c_network, &ipp.ip, ipp.port,
+        new_networking(logger.get(), &node->c_memory, &node->c_network, &ipp.ip, ipp.port,
             ipp.port + 100, nullptr),
         kill_networking);
     if (net == nullptr) {
