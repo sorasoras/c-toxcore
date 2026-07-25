@@ -25,11 +25,12 @@ static const Network_Funcs kNetworkVtable = {
         [](void *_Nonnull obj, Socket sock, const IP_Port *_Nonnull addr) {
             return static_cast<FakeNetworkStack *>(obj)->connect(sock, addr);
         },
-    .recvbuf = [](void *_Nonnull obj,
-                   Socket sock) { return static_cast<FakeNetworkStack *>(obj)->recvbuf(sock); },
-    .recv
-    = [](void *_Nonnull obj, Socket sock, uint8_t *_Nonnull buf,
-          std::size_t len) { return static_cast<FakeNetworkStack *>(obj)->recv(sock, buf, len); },
+.recvbuf
+    = [](void *_Nonnull obj, Socket sock, uint16_t length) {
+        return static_cast<FakeNetworkStack *>(obj)->recvbuf(sock, length);
+    },
+    .recv = [](void *_Nonnull obj, Socket sock, uint8_t *_Nonnull buf,
+                size_t len) { return static_cast<FakeNetworkStack *>(obj)->recv(sock, buf, len); },
     .recvfrom =
         [](void *_Nonnull obj, Socket sock, uint8_t *_Nonnull buf, std::size_t len,
             IP_Port *_Nonnull addr) {
@@ -232,7 +233,7 @@ int FakeNetworkStack::recv(Socket sock, uint8_t *buf, std::size_t len)
     return -1;
 }
 
-int FakeNetworkStack::recvbuf(Socket sock)
+int FakeNetworkStack::recvbuf(Socket sock, uint16_t length)
 {
     if (auto *s = get_sock(sock))
         return s->recv_buffer_size();
