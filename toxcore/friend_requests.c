@@ -19,6 +19,7 @@
 #include "onion.h"
 #include "onion_announce.h"
 #include "onion_client.h"
+#include "pow.h"
 
 static_assert(ONION_CLIENT_MAX_DATA_SIZE <= MAX_DATA_REQUEST_SIZE, "ONION_CLIENT_MAX_DATA_SIZE is too big");
 static_assert(MAX_DATA_REQUEST_SIZE <= ONION_MAX_DATA_SIZE, "MAX_DATA_REQUEST_SIZE is too big");
@@ -141,7 +142,20 @@ static int friendreq_handlepacket(void *_Nonnull object, const uint8_t *_Nonnull
     }
 
     if (memcmp(data, &fr->nospam, sizeof(fr->nospam)) != 0) {
-        return 1;
+        // Nospam doesn't match. Check for POW proof as fallback.
+        // POW format after nospam: [1 byte flags=0x01][8 byte nonce][message]
+        const uint16_t msg_offset = sizeof(fr->nospam);
+        if (length > msg_offset + 1 + POW_NONCE_SIZE
+                && data[msg_offset] == 0x01) {  // 0x01 = POW present
+            const uint8_t *nonce = data + msg_offset + 1;
+            // Use default difficulty of 20 for anonymous friend requests
+            if (!pow_verify(source_pubkey, nonce, 20)) {
+                return 1;  // Invalid POW
+            }
+            // POW valid — accept request despite nospam mismatch
+        } else {
+            return 1;  // Neither nospam nor POW matched
+        }
     }
 
     if (fr->filter_function != nullptr) {
