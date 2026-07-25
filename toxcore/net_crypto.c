@@ -1523,12 +1523,16 @@ static int send_data_packet_helper(const Net_Crypto *_Nonnull c, int crypt_conne
 
     num = net_htonl(num);
     buffer_start = net_htonl(buffer_start);
-    const uint16_t padding_length = (MAX_CRYPTO_DATA_SIZE - length) % CRYPTO_MAX_PADDING;
+    // Random padding for traffic indistinguishability: random length 0..CRYPTO_MAX_PADDING
+    uint8_t rng_byte;
+    random_bytes(c->rng, &rng_byte, 1);
+    const uint16_t padding_length = rng_byte % (CRYPTO_MAX_PADDING + 1);
     const uint16_t packet_size = sizeof(uint32_t) + sizeof(uint32_t) + padding_length + length;
     VLA(uint8_t, packet, packet_size);
     memcpy(packet, &buffer_start, sizeof(uint32_t));
     memcpy(packet + sizeof(uint32_t), &num, sizeof(uint32_t));
-    memzero(packet + (sizeof(uint32_t) * 2), padding_length);
+    // Fill padding with random bytes
+    random_bytes(c->rng, packet + (sizeof(uint32_t) * 2), padding_length);
     memcpy(packet + (sizeof(uint32_t) * 2) + padding_length, data, length);
 
     return send_data_packet(c, crypt_connection_id, packet, packet_size);

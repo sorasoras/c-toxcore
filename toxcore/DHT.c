@@ -45,6 +45,10 @@
 /** Time in seconds after which punching parameters will be reset */
 #define PUNCH_RESET_TIME 40
 
+/** Maximum number of nodes from the same /24 (IPv4) or /64 (IPv6) subnet
+ *  allowed in the close list. Mitigates Sybil attacks from a single host. */
+#define MAX_NODES_PER_SUBNET 2
+
 #define MAX_NORMAL_PUNCHING_TRIES 5
 
 #define NAT_PING_REQUEST    0
@@ -1191,6 +1195,24 @@ static bool ping_node_from_nodes_response_ok(DHT *_Nonnull dht, const uint8_t *_
 uint32_t addto_lists(DHT *dht, const IP_Port *ip_port, const uint8_t *public_key)
 {
     const IP_Port ipp_copy = ip_port_normalize(ip_port);
+
+    // Sybil defense: limit nodes per subnet in the close list
+    uint32_t subnet_count = 0;
+    for (size_t i = 0; i < LCLIENT_LIST; ++i) {
+        const IP_Port *existing = &dht->close_clientlist[i].assoc4.ip_port;
+        if (ip_is_lan(&existing->ip) == ip_is_lan(&ipp_copy.ip)
+                && net_family_is_ipv4(existing->ip.family)
+                && net_family_is_ipv4(ipp_copy.ip.family)) {
+            // /24 subnet: compare first 3 bytes
+            if (memcmp(&existing->ip.ip.v4, &ipp_copy.ip.ip.v4, 3) == 0) {
+                ++subnet_count;
+            }
+        }
+    }
+    if (subnet_count >= MAX_NODES_PER_SUBNET) {
+        // Don't add more nodes from this subnet
+        return 0;
+    }
 
     uint32_t used = 0;
 

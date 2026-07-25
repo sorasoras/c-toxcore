@@ -133,7 +133,7 @@ typedef enum Packet_Id {
 #define MAX_TCP_RELAYS_PEER 4
 
 /** All packets will be padded a number of bytes based on this number. */
-#define CRYPTO_MAX_PADDING 8
+#define CRYPTO_MAX_PADDING 255
 
 /**
  * Base current transfer speed on last CONGESTION_QUEUE_ARRAY_SIZE number of points taken
