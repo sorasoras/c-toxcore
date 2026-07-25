@@ -1839,14 +1839,23 @@ static void do_dht_friends(DHT *_Nonnull dht)
  */
 static void do_close(DHT *_Nonnull dht)
 {
-    // Only bootstrap every 4th iteration to avoid packet spam when
-    // to_bootstrap accumulates offline nodes that never respond
+    // Exponential backoff: start with 4-iteration delay, double up to 64
+    // when to_bootstrap accumulates nodes that never respond
     static uint8_t bootstrap_skip = 0;
-    if (++bootstrap_skip >= 4) {
+    static uint8_t bootstrap_backoff = 4;
+    if (++bootstrap_skip >= bootstrap_backoff) {
         bootstrap_skip = 0;
 
         for (size_t i = 0; i < dht->num_to_bootstrap; ++i) {
             dht_send_nodes_request(dht, &dht->to_bootstrap[i].ip_port, dht->to_bootstrap[i].public_key, dht->self_public_key);
+        }
+
+        // If we had nodes to bootstrap but the list keeps growing,
+        // increase backoff to reduce spam
+        if (dht->num_to_bootstrap > 0 && bootstrap_backoff < 64) {
+            bootstrap_backoff *= 2;
+        } else if (dht->num_to_bootstrap == 0 && bootstrap_backoff > 4) {
+            bootstrap_backoff = 4;  // Reset when list is empty
         }
 
         dht->num_to_bootstrap = 0;

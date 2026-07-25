@@ -24,6 +24,7 @@
 #include "onion.h"
 #include "onion_announce.h"
 #include "onion_client.h"
+#include "pow.h"
 #include "util.h"
 
 #define PORTS_PER_DISCOVERY 10
@@ -868,19 +869,46 @@ int send_friend_request_packet(Friend_Connections *fr_c, int friendcon_id, uint3
         return -1;
     }
 
-    const uint16_t packet_size = 1 + sizeof(nospam_num) + length;
+    // Add POW nonce for anti-spam (when room allows)
+    uint8_t pow_nonce[POW_NONCE_SIZE] = {0};
+    const uint16_t pow_overhead = 1 + POW_NONCE_SIZE;  // flag byte + nonce
+    const uint16_t packet_size_no_pow = 1 + sizeof(nospam_num) + length;
+    const uint16_t packet_size = packet_size_no_pow + pow_overhead;
+
+    if (packet_size <= ONION_CLIENT_MAX_DATA_SIZE) {
+        // Get recipient's public key for POW computation
+        uint8_t real_pk[CRYPTO_PUBLIC_KEY_SIZE];
+        get_friendcon_public_keys(real_pk, nullptr, fr_c, friendcon_id);
+        pow_compute(fr_c->rng, real_pk, 20, pow_nonce);
+
+        uint8_t packet[MAX_UDP_PACKET_SIZE];
+        packet[0] = (friend_con->status == FRIENDCONN_STATUS_CONNECTED)
+            ? PACKET_ID_FRIEND_REQUESTS : CRYPTO_PACKET_FRIEND_REQ;
+        net_pack_u32(packet + 1, nospam_num);
+        packet[1 + sizeof(nospam_num)] = 0x01;  // POW flag
+        memcpy(packet + 1 + sizeof(nospam_num) + 1, pow_nonce, POW_NONCE_SIZE);
+        memcpy(packet + 1 + sizeof(nospam_num) + pow_overhead, data, length);
+
+        if (friend_con->status == FRIENDCONN_STATUS_CONNECTED) {
+            return write_cryptpacket(fr_c->net_crypto, friend_con->crypt_connection_id, packet, packet_size,
+                                     false) != -1 ? 1 : 0;
+        }
+        return send_onion_data(fr_c->onion_c, friend_con->onion_friendnum, packet, packet_size);
+    }
+
+    // Fallback: send without POW if packet would be too large
     uint8_t packet[MAX_UDP_PACKET_SIZE];
     net_pack_u32(packet + 1, nospam_num);
     memcpy(packet + 1 + sizeof(nospam_num), data, length);
 
     if (friend_con->status == FRIENDCONN_STATUS_CONNECTED) {
         packet[0] = PACKET_ID_FRIEND_REQUESTS;
-        return write_cryptpacket(fr_c->net_crypto, friend_con->crypt_connection_id, packet, packet_size,
+        return write_cryptpacket(fr_c->net_crypto, friend_con->crypt_connection_id, packet, packet_size_no_pow,
                                  false) != -1 ? 1 : 0;
     }
 
     packet[0] = CRYPTO_PACKET_FRIEND_REQ;
-    const int num = send_onion_data(fr_c->onion_c, friend_con->onion_friendnum, packet, packet_size);
+    const int num = send_onion_data(fr_c->onion_c, friend_con->onion_friendnum, packet, packet_size_no_pow);
 
     if (num <= 0) {
         return -1;
