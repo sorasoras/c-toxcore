@@ -30,6 +30,7 @@
 #include "logger.h"
 #include "mem.h"
 #include "mono_time.h"
+#include "multi_device.h"
 #include "net.h"
 #include "net_crypto.h"
 #include "network.h"
@@ -4739,6 +4740,76 @@ void tox_iterate_options_set_fail_hard(Tox_Iterate_Options *options, bool fail_h
 bool tox_iterate_options_get_fail_hard(const Tox_Iterate_Options *options)
 {
     return options == nullptr ? false : options->fail_hard;
+}
+
+/* --- Multi-Device API --- */
+
+bool tox_self_link_device(
+    Tox *tox, const char *device_name, size_t name_length,
+    uint8_t device_pubkey[TOX_PUBLIC_KEY_SIZE],
+    uint8_t device_seckey[TOX_SECRET_KEY_SIZE],
+    Tox_Err_Link_Device *error)
+{
+    if (tox == nullptr || device_name == nullptr || device_pubkey == nullptr
+            || device_seckey == nullptr) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_LINK_DEVICE_NULL);
+        return false;
+    }
+    if (name_length > TOX_MAX_DEVICE_NAME_LENGTH) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_LINK_DEVICE_NULL);
+        return false;
+    }
+    multi_device_generate_keypair(&tox->sys.rng, device_pubkey, device_seckey);
+    const uint8_t *master_sk = dht_get_self_secret_key(tox->m->dht);
+    if (!multi_device_list_add(tox->m->multi_device_list, master_sk,
+            device_pubkey, device_seckey, device_name, (uint16_t)name_length,
+            tox->mono_time, 0)) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_LINK_DEVICE_TOO_MANY);
+        return false;
+    }
+    SET_ERROR_PARAMETER(error, TOX_ERR_LINK_DEVICE_OK);
+    return true;
+}
+
+bool tox_self_unlink_device(
+    Tox *tox, const uint8_t device_pubkey[TOX_PUBLIC_KEY_SIZE],
+    Tox_Err_Unlink_Device *error)
+{
+    if (tox == nullptr || device_pubkey == nullptr) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_UNLINK_DEVICE_NULL);
+        return false;
+    }
+    if (!multi_device_list_remove(tox->m->multi_device_list, device_pubkey)) {
+        SET_ERROR_PARAMETER(error, TOX_ERR_UNLINK_DEVICE_NOT_FOUND);
+        return false;
+    }
+    SET_ERROR_PARAMETER(error, TOX_ERR_UNLINK_DEVICE_OK);
+    return true;
+}
+
+uint8_t tox_self_get_device_count(const Tox *tox)
+{
+    assert(tox != nullptr);
+    return tox->m->multi_device_list != nullptr ? tox->m->multi_device_list->num_devices : 0;
+}
+
+bool tox_self_get_device_pubkey(
+    const Tox *tox, uint8_t index, uint8_t device_pubkey[TOX_PUBLIC_KEY_SIZE])
+{
+    assert(tox != nullptr);
+    if (index >= tox->m->multi_device_list->num_devices) return false;
+    memcpy(device_pubkey, tox->m->multi_device_list->devices[index].device_pubkey, TOX_PUBLIC_KEY_SIZE);
+    return true;
+}
+
+size_t tox_self_get_device_name(
+    const Tox *tox, uint8_t index, char device_name[TOX_MAX_DEVICE_NAME_LENGTH])
+{
+    assert(tox != nullptr);
+    if (index >= tox->m->multi_device_list->num_devices) return 0;
+    const uint16_t len = tox->m->multi_device_list->devices[index].name_length;
+    memcpy(device_name, tox->m->multi_device_list->devices[index].device_name, len);
+    return len;
 }
 
 /* --- Offline Messaging API --- */

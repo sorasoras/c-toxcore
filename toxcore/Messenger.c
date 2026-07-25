@@ -3622,6 +3622,10 @@ Messenger *new_messenger(Mono_Time *mono_time, const Memory *mem, const Random *
     }
 
     m->options = *options;
+
+    // Initialize multi-device list with our own public key as master
+    const uint8_t *self_pk = dht_get_self_public_key(m->dht);
+    m->multi_device_list = multi_device_list_new(m->mem, self_pk);
     friendreq_init(m->fr, m->fr_c);
     set_nospam(m->fr, random_u32(m->rng));
     set_filter_function(m->fr, &friend_already_added, m);
@@ -3663,6 +3667,7 @@ void kill_messenger(Messenger *m)
     kill_forwarding(m->forwarding);
     kill_net_crypto(m->net_crypto);
     netprof_kill(m->mem, m->tcp_np);
+    multi_device_list_free(m->multi_device_list);
     kill_dht(m->dht);
     kill_networking(m->net);
 

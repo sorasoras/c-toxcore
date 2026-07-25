@@ -27,6 +27,7 @@
 #include "logger.h"
 #include "mem.h"
 #include "mono_time.h"
+#include "multi_device.h"
 #include "net.h"
 #include "net_crypto.h"
 #include "net_profile.h"
@@ -320,6 +321,8 @@ struct Messenger {
     m_friend_offline_message_cb *_Nullable friend_offline_message;
 
     uint64_t last_offline_msg_poll;  /**< Last time we polled for offline messages. */
+
+    Multi_Device_List *_Nullable multi_device_list;  /**< Linked devices for this identity. */
 
     Messenger_Options options;
 };

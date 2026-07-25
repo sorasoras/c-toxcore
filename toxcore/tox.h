@@ -800,6 +800,87 @@ size_t tox_self_get_name_size(const Tox *tox);
 void tox_self_get_name(const Tox *tox, uint8_t name[]);
 
 /**
+ * @brief Multi-device identity management.
+ */
+
+/** Maximum number of devices that can be linked to one Tox ID. */
+#define TOX_MAX_LINKED_DEVICES 8
+
+/** Maximum length of a device name. */
+#define TOX_MAX_DEVICE_NAME_LENGTH 64
+
+/**
+ * @brief Error codes for tox_self_link_device.
+ */
+typedef enum Tox_Err_Link_Device {
+    TOX_ERR_LINK_DEVICE_OK,
+    TOX_ERR_LINK_DEVICE_TOO_MANY,
+    TOX_ERR_LINK_DEVICE_ALREADY_EXISTS,
+    TOX_ERR_LINK_DEVICE_NULL,
+} Tox_Err_Link_Device;
+
+/**
+ * @brief Generate a new keypair for a linked device and add it to the
+ *   device list for this Tox ID.
+ *
+ * The device certificate is signed by this instance's secret key (the
+ * master key). The device keypair is returned to the caller so it can
+ * be stored for use by the other device.
+ *
+ * @param device_name Human-readable name for the device (e.g. "Phone").
+ * @param name_length Length of device_name.
+ * @param device_pubkey Output: the device's public key (32 bytes).
+ * @param device_seckey Output: the device's secret key (32 bytes).
+ * @return true on success.
+ */
+bool tox_self_link_device(
+    Tox *tox,
+    const char *device_name, size_t name_length,
+    uint8_t device_pubkey[TOX_PUBLIC_KEY_SIZE],
+    uint8_t device_seckey[TOX_SECRET_KEY_SIZE],
+    Tox_Err_Link_Device *error);
+
+/**
+ * @brief Error codes for tox_self_unlink_device.
+ */
+typedef enum Tox_Err_Unlink_Device {
+    TOX_ERR_UNLINK_DEVICE_OK,
+    TOX_ERR_UNLINK_DEVICE_NOT_FOUND,
+    TOX_ERR_UNLINK_DEVICE_NULL,
+} Tox_Err_Unlink_Device;
+
+/**
+ * @brief Remove a device from the linked device list.
+ */
+bool tox_self_unlink_device(
+    Tox *tox,
+    const uint8_t device_pubkey[TOX_PUBLIC_KEY_SIZE],
+    Tox_Err_Unlink_Device *error);
+
+/**
+ * @brief Get the number of linked devices.
+ */
+uint8_t tox_self_get_device_count(const Tox *tox);
+
+/**
+ * @brief Get the public key of the Nth linked device.
+ * @param index 0-based index, must be < tox_self_get_device_count.
+ * @param device_pubkey Output: the device's public key (32 bytes).
+ * @return true on success.
+ */
+bool tox_self_get_device_pubkey(
+    const Tox *tox, uint8_t index,
+    uint8_t device_pubkey[TOX_PUBLIC_KEY_SIZE]);
+
+/**
+ * @brief Get the name of the Nth linked device.
+ * @return Length of the device name, or 0 on error.
+ */
+size_t tox_self_get_device_name(
+    const Tox *tox, uint8_t index,
+    char device_name[TOX_MAX_DEVICE_NAME_LENGTH]);
+
+/**
  * @brief Set the client's status message.
  *
  * Status message length cannot exceed TOX_MAX_STATUS_MESSAGE_LENGTH. If
