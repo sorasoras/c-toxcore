@@ -326,6 +326,8 @@ struct Messenger {
 
     Multi_Device_List *_Nullable multi_device_list;  /**< Linked devices for this identity. */
 
+    uint8_t pow_difficulty;  /**< POW difficulty for friend requests (0=off). */
+
     Messenger_Options options;
 };
 

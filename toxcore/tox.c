@@ -35,6 +35,7 @@
 #include "net_crypto.h"
 #include "network.h"
 #include "onion_client.h"
+#include "pow.h"
 #include "state.h"
 #include "tox_event.h"
 #include "tox_events.h"
@@ -1137,6 +1138,21 @@ uint32_t tox_self_get_nospam(const Tox *_Nonnull tox)
     const uint32_t ret = net_ntohl(get_nospam(tox->m->fr));
     tox_unlock(tox);
     return ret;
+}
+
+void tox_self_set_pow_difficulty(Tox *tox, uint8_t difficulty)
+{
+    assert(tox != nullptr);
+    if (difficulty > POW_MAX_DIFFICULTY) {
+        difficulty = POW_MAX_DIFFICULTY;
+    }
+    tox->m->pow_difficulty = difficulty;
+}
+
+uint8_t tox_self_get_pow_difficulty(const Tox *tox)
+{
+    assert(tox != nullptr);
+    return tox->m->pow_difficulty;
 }
 
 void tox_self_get_public_key(const Tox *_Nonnull tox, Tox_Public_Key _Nullable public_key)

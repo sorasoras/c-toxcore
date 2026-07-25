@@ -800,6 +800,25 @@ size_t tox_self_get_name_size(const Tox *tox);
 void tox_self_get_name(const Tox *tox, uint8_t name[]);
 
 /**
+ * @brief Set the proof-of-work difficulty for friend requests.
+ *
+ * When difficulty > 0, friend requests to this Tox ID must include a valid
+ * POW nonce. This replaces the static nospam anti-spam mechanism.
+ *
+ * Difficulty 0 (default) = no POW required (backward compatible).
+ * Difficulty 20 = ~1 million hashes (~1ms on modern CPU).
+ * Maximum: 24.
+ *
+ * @see tox_self_get_pow_difficulty
+ */
+void tox_self_set_pow_difficulty(Tox *tox, uint8_t difficulty);
+
+/**
+ * @brief Get the current proof-of-work difficulty.
+ */
+uint8_t tox_self_get_pow_difficulty(const Tox *tox);
+
+/**
  * @brief Multi-device identity management.
  */
 
