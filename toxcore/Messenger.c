@@ -618,6 +618,9 @@ int m_send_message_generic(Messenger *m, int32_t friendnumber, uint8_t type, con
         *message_id = msg_id;
     }
 
+    // Fan out to friend's additional linked devices via offline storage
+    m_store_message_for_friend_devices(m, friendnumber, type, message, length);
+
     return 0;
 }
 
@@ -639,6 +642,57 @@ static bool write_cryptpacket_id(const Messenger *_Nonnull m, int32_t friendnumb
 
     return write_cryptpacket(m->net_crypto, friend_connection_crypt_connection_id(m->fr_c,
                              m->friendlist[friendnumber].friendcon_id), packet, length + 1, congestion_control) != -1;
+}
+
+/** @brief Store a copy of a message for each additional device via offline message storage.
+ *
+ * When a friend has multiple linked devices, the primary connection delivers
+ * to the main device. Additional copies are stored in the DHT under each
+ * device's key so they receive the message when they come online.
+ */
+static void m_store_message_for_friend_devices(const Messenger *_Nonnull m,
+        uint32_t friend_number, unsigned int message_type,
+        const uint8_t *_Nonnull message, size_t length)
+{
+    const Friend *const friend_obj = &m->friendlist[friend_number];
+
+    if (friend_obj->multi_device_list == nullptr
+            || friend_obj->multi_device_list->num_devices <= 1) {
+        return;  // Only one device, nothing to fan out
+    }
+
+    DHT_Store *store = m->dht->offline_store;
+    if (store == nullptr) {
+        return;
+    }
+
+    // For each additional device (skip index 0 = primary), store an offline copy
+    for (uint8_t i = 1; i < friend_obj->multi_device_list->num_devices; ++i) {
+        const uint8_t *device_pk = friend_obj->multi_device_list->devices[i].device_pubkey;
+
+        uint8_t envelope[OFFLINE_MSG_MAX_ENVELOPE];
+        uint16_t envelope_len = 0;
+
+        static uint64_t fanout_msg_id = 0;
+        ++fanout_msg_id;
+
+        if (!offline_msg_create_envelope(
+                m->mem, m->rng, m->mono_time,
+                dht_get_self_public_key(m->dht),
+                dht_get_self_secret_key(m->dht),
+                device_pk,
+                fanout_msg_id, (Offline_Msg_Type)message_type,
+                message, (uint16_t)length,
+                envelope, &envelope_len)) {
+            continue;
+        }
+
+        uint8_t dht_key[DHT_STORE_KEY_SIZE];
+        memcpy(dht_key, device_pk, CRYPTO_PUBLIC_KEY_SIZE);
+        memset(dht_key + CRYPTO_PUBLIC_KEY_SIZE, 0, DHT_STORE_KEY_SIZE - CRYPTO_PUBLIC_KEY_SIZE);
+
+        dht_store_put(store, dht_key, envelope, envelope_len, DHT_STORE_DEFAULT_TTL);
+    }
 }
 
 /** @brief Send a name packet to friendnumber.
