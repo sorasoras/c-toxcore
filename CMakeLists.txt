@@ -242,6 +242,8 @@ set(toxcore_SOURCES
   toxcore/bin_unpack.h
   toxcore/ccompat.c
   toxcore/ccompat.h
+  toxcore/clock.c
+  toxcore/clock.h
   toxcore/crypto_core.c
   toxcore/crypto_core.h
   toxcore/noise.c
@@ -325,6 +327,8 @@ set(toxcore_SOURCES
   toxcore/Messenger.h
   toxcore/mem.c
   toxcore/mem.h
+  toxcore/mono_clock.c
+  toxcore/mono_clock.h
   toxcore/mono_time.c
   toxcore/mono_time.h
   toxcore/net.c
@@ -343,6 +347,8 @@ set(toxcore_SOURCES
   toxcore/onion_client.c
   toxcore/onion_client.h
   toxcore/onion.h
+  toxcore/os_clock.c
+  toxcore/os_clock.h
   toxcore/os_event.c
   toxcore/os_event.h
   toxcore/os_memory.c
