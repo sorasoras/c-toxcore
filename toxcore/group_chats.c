@@ -8016,6 +8016,12 @@ bool handle_gc_invite_accepted_packet(const GC_Session *c, int friend_number, co
 
     const int peer_number = peer_add(chat, nullptr, invite_chat_pk);
 
+    if (peer_number < 0) {
+        LOGGER_WARNING(chat->log, "Group invite acceptance from friend %d rejected (peer_add failed: %d)",
+                       friend_number, peer_number);
+        return false;
+    }
+
     if (!friend_was_invited(m, chat, friend_number)) {
         LOGGER_WARNING(chat->log, "Group invite acceptance from friend %d rejected (not invited or invite buffer overflowed)",
                        friend_number);
@@ -8090,7 +8096,7 @@ int gc_accept_invite(GC_Session *c, int32_t friend_number, const uint8_t *data, 
     const uint8_t *chat_id = data;
     const uint8_t *invite_chat_pk = data + CHAT_ID_SIZE;
 
-    const int group_number = create_new_group(c->messenger->mem, c, nick, nick_length, false, GI_PUBLIC);
+    const int group_number = create_new_group(c->messenger->mem, c, nick, nick_length, false, GI_PRIVATE);
 
     if (group_number == -1) {
         return -2;
@@ -8252,7 +8258,7 @@ void kill_dht_groupchats(GC_Session *c)
 
 bool gc_group_is_valid(const GC_Chat *chat)
 {
-    return chat->connection_state != CS_NONE && chat->shared_state.version > 0;
+    return chat->connection_state != CS_NONE;
 }
 
 /** Return true if `group_number` designates an active group in session `c`. */

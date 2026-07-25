@@ -898,6 +898,7 @@ static int accept_connection(TCP_Server *_Nonnull tcp_server, Socket sock)
     conn->con.rng = tcp_server->rng;
     conn->con.sock = sock;
     conn->next_packet_length = 0;
+    conn->last_pinged = 0;
 
     ++tcp_server->incoming_connection_queue_index;
     return index;
@@ -1060,7 +1061,7 @@ static void do_tcp_accept_new(TCP_Server *_Nonnull tcp_server)
 }
 #endif /* TCP_SERVER_USE_EPOLL */
 
-static int do_incoming(TCP_Server *_Nonnull tcp_server, uint32_t i)
+static int do_incoming(TCP_Server *_Nonnull tcp_server, const Mono_Time *_Nonnull mono_time, uint32_t i)
 {
     TCP_Secure_Connection *const conn = &tcp_server->incoming_connection_queue[i];
 
@@ -1079,6 +1080,16 @@ static int do_incoming(TCP_Server *_Nonnull tcp_server, uint32_t i)
     }
 
     if (ret != 1) {
+        // Handshake not ready yet. Check for timeout to prevent DoS where an
+        // attacker sends fewer than TCP_CLIENT_HANDSHAKE_SIZE bytes and never
+        // completes the handshake, keeping the connection in the incoming queue
+        // indefinitely.
+        if (conn->last_pinged == 0) {
+            conn->last_pinged = mono_time_get(mono_time);
+        } else if (mono_time_is_timeout(mono_time, conn->last_pinged, TCP_HANDSHAKE_TIMEOUT)) {
+            LOGGER_TRACE(tcp_server->logger, "incoming connection %u timed out waiting for handshake", i);
+            kill_tcp_secure_connection(conn);
+        }
         return -1;
     }
 
@@ -1158,10 +1169,10 @@ static void do_confirmed_recv(TCP_Server *_Nonnull tcp_server, uint32_t i)
 }
 
 #ifndef TCP_SERVER_USE_EPOLL
-static void do_tcp_incoming(TCP_Server *_Nonnull tcp_server)
+static void do_tcp_incoming(TCP_Server *_Nonnull tcp_server, const Mono_Time *_Nonnull mono_time)
 {
     for (uint32_t i = 0; i < MAX_INCOMING_CONNECTIONS; ++i) {
-        do_incoming(tcp_server, i);
+        do_incoming(tcp_server, mono_time, i);
     }
 }
 
@@ -1309,7 +1320,7 @@ static bool tcp_epoll_process(TCP_Server *_Nonnull tcp_server, const Mono_Time *
             }
 
             case TCP_SOCKET_INCOMING: {
-                const int index_new = do_incoming(tcp_server, index);
+                const int index_new = do_incoming(tcp_server, mono_time, index);
 
                 if (index_new != -1) {
                     LOGGER_TRACE(tcp_server->logger, "incoming connection %d was accepted as %d", index, index_new);
@@ -1371,7 +1382,7 @@ void do_tcp_server(TCP_Server *tcp_server, const Mono_Time *mono_time)
 
 #else
     do_tcp_accept_new(tcp_server);
-    do_tcp_incoming(tcp_server);
+    do_tcp_incoming(tcp_server, mono_time);
     do_tcp_unconfirmed(tcp_server, mono_time);
 #endif /* TCP_SERVER_USE_EPOLL */
 

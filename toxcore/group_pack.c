@@ -468,7 +468,6 @@ void gc_save_pack_group(const GC_Chat *chat, Bin_Pack *bp)
 {
     if (chat->numpeers == 0) {
         LOGGER_ERROR(chat->log, "Failed to pack group: numpeers is 0");
-        return;
     }
 
     bin_pack_array(bp, 7);

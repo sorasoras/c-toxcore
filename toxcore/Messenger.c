@@ -2962,7 +2962,7 @@ static uint8_t *_Nonnull friends_list_save(const Messenger *_Nonnull m, uint8_t 
                 memcpy(temp.info, m->friendlist[i].info, friendrequest_length);
 
                 temp.info_size = net_htons(m->friendlist[i].info_size);
-                temp.friendrequest_nospam = m->friendlist[i].friendrequest_nospam;
+                host_to_lendian_bytes32((uint8_t *)&temp.friendrequest_nospam, m->friendlist[i].friendrequest_nospam);
             } else {
                 temp.status = 3;
                 memcpy(temp.name, m->friendlist[i].name, m->friendlist[i].name_length);
@@ -3023,7 +3023,9 @@ static State_Load_Status friends_list_load(Messenger *_Nonnull m, const uint8_t 
             /* TODO(irungentoo): This is not a good way to do this. */
             uint8_t address[FRIEND_ADDRESS_SIZE];
             pk_copy(address, temp.real_pk);
-            memcpy(address + CRYPTO_PUBLIC_KEY_SIZE, &temp.friendrequest_nospam, sizeof(uint32_t));
+            uint32_t friendrequest_nospam;
+            lendian_bytes_to_host32(&friendrequest_nospam, (const uint8_t *)&temp.friendrequest_nospam);
+            memcpy(address + CRYPTO_PUBLIC_KEY_SIZE, &friendrequest_nospam, sizeof(uint32_t));
             uint16_t checksum = data_checksum(address, FRIEND_ADDRESS_SIZE - sizeof(checksum));
             memcpy(address + CRYPTO_PUBLIC_KEY_SIZE + sizeof(uint32_t), &checksum, sizeof(checksum));
             m_addfriend(m, address, temp.info, net_ntohs(temp.info_size));

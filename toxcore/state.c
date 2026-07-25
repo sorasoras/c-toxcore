@@ -36,13 +36,13 @@ int state_load(const Logger *log, state_load_cb *state_load_callback, void *oute
             return -1;
         }
 
-        if (lendian_to_host16(cookie_type >> 16) != cookie_inner) {
+        if ((cookie_type >> 16) != cookie_inner) {
             /* something is not matching up in a bad way, give up */
             LOGGER_ERROR(log, "state file garbled: %04x != %04x", cookie_type >> 16, cookie_inner);
             return -1;
         }
 
-        const uint16_t type = lendian_to_host16(cookie_type & 0xFFFF);
+        const uint16_t type = cookie_type & 0xFFFF;
 
         switch (state_load_callback(outer, data, length_sub, type)) {
             case STATE_LOAD_STATUS_CONTINUE: {
@@ -74,7 +74,7 @@ uint8_t *state_write_section_header(uint8_t *data, uint16_t cookie_type, uint32_
 {
     host_to_lendian_bytes32(data, len);
     data += sizeof(uint32_t);
-    host_to_lendian_bytes32(data, (host_to_lendian16(cookie_type) << 16) | host_to_lendian16(section_type));
+    host_to_lendian_bytes32(data, ((uint32_t)cookie_type << 16) | section_type);
     data += sizeof(uint32_t);
     return data;
 }

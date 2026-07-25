@@ -61,6 +61,9 @@ bool tcp_packet_from_int(uint32_t value, Tcp_Packet *_Nonnull out_enum);
 #define TCP_PING_FREQUENCY 30
 #define TCP_PING_TIMEOUT 10
 
+/** timeout in seconds for incoming TCP handshakes to complete */
+#define TCP_HANDSHAKE_TIMEOUT 10
+
 #define MAX_PACKET_SIZE 2048
 
 typedef struct TCP_Connection {
